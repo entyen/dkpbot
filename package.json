@@ -1,7 +1,7 @@
 {
-  "name": "@dbot",
+  "name": "@dkpapp",
   "version": "1.0.0",
-  "description": "Monorepo for dbot",
+  "description": "Monorepo for dkpapp",
   "main": "index.js",
   "workspaces": [
     "packages/*"
