@@ -22,7 +22,6 @@ export const DiscordLoginButton = () => {
 export const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
 
-  // Загружаем пользователя из localStorage
   const loadUserFromLocalStorage = () => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -33,10 +32,8 @@ export const Dashboard = () => {
   };
 
   useEffect(() => {
-    // Загружаем данные при первом рендере
     loadUserFromLocalStorage();
 
-    // Обновляем данные, если localStorage изменяется
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "user") {
         loadUserFromLocalStorage();
@@ -50,23 +47,35 @@ export const Dashboard = () => {
     };
   }, []);
 
-  // Принудительное обновление после записи в localStorage
   useEffect(() => {
     const interval = setInterval(() => {
       loadUserFromLocalStorage();
     }, 500);
 
-    return () => clearInterval(interval); // Очищаем таймер
+    return () => clearInterval(interval);
   }, []);
 
   if (!user) {
-    return <div>Загрузка данных пользователя...</div>;
+    return (
+      <div className="dashboard">
+        <div className="dashboard__loading">
+          <span className="dashboard__spinner" />
+          Загрузка данных пользователя...
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h1>Добро пожаловать, {user.global_name}</h1>
-      <p>Дискорд: {user.username}</p>
+    <div className="dashboard">
+      <div className="dashboard__card">
+        <h1 className="dashboard__title">
+          Добро пожаловать, {user.global_name}
+        </h1>
+        <p className="dashboard__subtitle">
+          <strong>Discord:</strong> {user.username}
+        </p>
+      </div>
     </div>
   );
 };
