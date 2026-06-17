@@ -1,22 +1,36 @@
+/* ─── Base Layout ─── */
 .base-layout {
-    background: var(--primary-bg);
-    height: 100%;
-    width: 100%;
+  background: var(--primary-bg);
+  height: 100%;
+  width: 100%;
+  display: flex;
+  min-height: 100vh;
+
+  &__wrapper {
     display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    width: 100%;
+  }
 
-    &__wrapper {
-        display: flex;
-        flex-direction: column;
-        min-height: 100%;
-        width: 100%;
-    }
+  &__content {
+    flex: 1 0 auto;
+    animation: pageFadeIn 0.3s ease both;
+  }
 
-    &__content {
-        flex: 1 0 auto;
-    }
+  &__header,
+  &__footer {
+    flex: 0 0 auto;
+  }
+}
 
-    &__header,
-    &__footer {
-        flex: 0 0 auto;
-    }
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

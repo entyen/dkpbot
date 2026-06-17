@@ -1,7 +1,41 @@
+/* ─── Login Page ─── */
 .LoginPage {
   width: 100%;
-  min-height: 100vh; /* Высота страницы */
+  min-height: 100vh;
   display: flex;
-  align-items: center; /* Центровка по вертикали */
-  justify-content: center; /* Центровка по горизонтали */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-bg);
+  gap: 2rem;
+  padding: 2rem;
+
+  &__title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text-heading);
+    text-align: center;
+  }
+
+  &__subtitle {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: 320px;
+    line-height: 1.5;
+  }
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2.5rem 3rem;
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-lg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-md);
+  }
 }

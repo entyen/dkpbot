@@ -14,8 +14,8 @@ interface HistoryItem {
 
 export const HistoryPage = () => {
   const navigate = useNavigate()
-  const [historyData, setHistoryData] = useState<HistoryItem[] | null>(null) // Данные истории
-  const [error, setError] = useState<string | null>(null) // Ошибка
+  const [historyData, setHistoryData] = useState<HistoryItem[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchHistory = async () => {
     try {
@@ -32,21 +32,19 @@ export const HistoryPage = () => {
             },
             {
               withCredentials: true,
-              //WIP TODO need impelent in /packages/frontend/src/app/routers/ProtectedRoute.tsx
               validateStatus: (status) => {
-                return (status >= 200 && status < 300) || status === 401 // Разрешаем статус 401
+                return (status >= 200 && status < 300) || status === 401
               },
             }
           )
 
           if (response.status == 401) {
-            //WIP TODO need impelent in /packages/frontend/src/app/routers/ProtectedRoute.tsx
             localStorage.clear()
             navigate("/login")
           } else if (response.data && response.data.length > 0) {
-            setHistoryData(response.data) // Успешно получили данные
+            setHistoryData(response.data)
           } else {
-            setHistoryData([]) // Данных нет
+            setHistoryData([])
           }
         } else {
           setError("Некорректные данные пользователя или сервера.")
@@ -60,15 +58,12 @@ export const HistoryPage = () => {
     }
   }
 
-  //TODO DONT WORK
   useEffect(() => {
-    // Первоначальная загрузка данных
     fetchHistory()
 
-    // Обработчик для события storage
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === "servers") {
-        fetchHistory() // Перезагружаем данные, если изменился servers
+        fetchHistory()
       }
     }
 
@@ -85,31 +80,45 @@ export const HistoryPage = () => {
 
   return (
     <section className="history-page">
+      <h1 className="page-title">История начислений</h1>
+      <p className="page-subtitle">Последние изменения DKP очков</p>
+
       {error ? (
-        <p className="error-message">{error}</p> // Ошибка
+        <p className="error-message">{error}</p>
       ) : historyData === null ? (
-        <p>Загрузка данных...</p> // Пока данные загружаются
+        <div className="loading">
+          <div className="loading-spinner" />
+          <p>Загрузка данных...</p>
+        </div>
       ) : historyData.length === 0 ? (
-        <p>Нет данных</p> // Данные отсутствуют
+        <p className="empty">Нет данных</p>
       ) : (
         <div className="history-list">
-          {historyData.map((item) => (
-            <div className="history-card" key={item._id}>
+          {historyData.map((item, index) => (
+            <div
+              className="history-card"
+              key={item._id}
+              style={{ "--card-index": index } as React.CSSProperties}
+            >
               <h3 className="history-reason">{item.givingReason}</h3>
-              <p>
-                <strong>Очки:</strong>{" "}
-                <span
-                  className={
-                    item.givingPoints > 0
-                      ? "positive-points"
-                      : "negative-points"
-                  }
-                >
-                  {item.givingPoints > 0
-                    ? `+${item.givingPoints}`
-                    : item.givingPoints}
+              <div className="history-meta">
+                <span>
+                  <strong>Очки:</strong>{" "}
+                  <span
+                    className={
+                      `history-points ${
+                        item.givingPoints > 0
+                          ? "positive-points"
+                          : "negative-points"
+                      }`
+                    }
+                  >
+                    {item.givingPoints > 0
+                      ? `+${item.givingPoints}`
+                      : item.givingPoints}
+                  </span>
                 </span>
-              </p>
+              </div>
             </div>
           ))}
         </div>

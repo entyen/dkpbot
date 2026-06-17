@@ -1,47 +1,124 @@
+/* ─── History Page ─── */
 .history-page {
-  padding: 20px;
-  background-color: #f9f9f9;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem 0;
+
+  .page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-heading);
+    margin-bottom: 0.5rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+  }
+
+  .error-message {
+    color: var(--red);
+    background: rgba(248, 81, 73, 0.1);
+    border: 1px solid rgba(248, 81, 73, 0.2);
+    border-radius: var(--border-radius-sm);
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .loading,
+  .empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-secondary);
+    font-size: 1rem;
+
+    .loading-spinner {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--blue-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 0.75rem;
+    }
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }
 
+/* ─── Список карточек ─── */
 .history-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
+/* ─── Карточка истории ─── */
 .history-card {
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 16px;
-  width: 300px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
+  background: var(--card-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius);
+  padding: 1.25rem 1.5rem;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base),
+    background var(--transition-base);
+  animation: cardFadeIn 0.4s ease both;
+  animation-delay: calc(var(--card-index, 0) * 0.05s);
+
+  &:hover {
+    transform: translateY(-2px);
+    background: var(--card-bg-hover);
+    box-shadow: var(--shadow-md);
+  }
+
+  .history-reason {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .history-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .history-points {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+
+    &.positive-points {
+      color: var(--green);
+      text-shadow: var(--shadow-glow-green);
+    }
+
+    &.negative-points {
+      color: var(--red);
+      text-shadow: var(--shadow-glow-red);
+    }
+  }
 }
 
-.history-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-}
-
-.history-reason {
-  font-size: 18px;
-  color: #333;
-  margin-bottom: 12px;
-}
-
-.positive-points {
-  color: #4caf50;
-  font-weight: bold;
-}
-
-.negative-points {
-  color: #f44336;
-  font-weight: bold;
-}
-
-.history-card p {
-  margin: 8px 0;
-  font-size: 14px;
-  color: #666;
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

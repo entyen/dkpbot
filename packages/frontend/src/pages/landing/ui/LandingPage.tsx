@@ -9,7 +9,7 @@ export const LandingPage = () => {
     navigate("/");
   }, [navigate]);
   return (
-    <section className="langing-page">
+    <section className="landing-page">
       Home Page
     </section>
   );

@@ -1,3 +1,77 @@
+/* ─── Глобальный сброс и база ─── */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
-  background-color: black;
+  font-family: var(--font-family, 'Inter', sans-serif);
+  background-color: var(--primary-bg, #0d1117);
+  color: var(--text-primary, #e6edf3);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: var(--blue-primary, #58a6ff);
+  text-decoration: none;
+  transition: color var(--transition-fast, 0.15s ease);
+}
+
+a:hover {
+  color: var(--blue-hover, #79c0ff);
+  text-decoration: underline;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ─── Скроллбар ─── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--secondary-bg, #161b22);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border, #30363d);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted, #484f58);
 }

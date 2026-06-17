@@ -4,7 +4,13 @@ import "./loginPage.scss";
 export const LoginPage = () => {
   return (
     <div className="LoginPage">
-      <DiscordLoginButton />
+      <div className="LoginPage__card">
+        <h1 className="LoginPage__title">DKP Dashboard</h1>
+        <p className="LoginPage__subtitle">
+          Авторизуйтесь через Discord, чтобы управлять DKP очками вашей гильдии
+        </p>
+        <DiscordLoginButton />
+      </div>
     </div>
   );
 };

@@ -1,26 +1,24 @@
-/* homeLayout.scss */
-
-/* Основной контейнер для всей страницы */
+/* ─── Home Layout ─── */
 .home-layout {
   display: flex;
   flex-direction: column;
-  min-height: 100vh; /* Обеспечиваем полную высоту экрана */
+  min-height: 100vh;
+  background: var(--primary-bg);
 }
 
 /* Обертка для контента */
 .home-layout__wrapper {
   display: flex;
-  flex: 1; /* Контент будет заполнять оставшееся пространство */
+  flex: 1;
   flex-direction: column;
 }
 
-/* Стили для основного контента */
+/* Основной контент */
 .home-layout__content {
   flex: 1;
-  padding: 20px;
-  overflow-y: auto; /* Прокрутка, если контент не помещается */
-  background-color: var(--light-gray); /* Цвет фона для контента */
-  box-sizing: border-box;
+  padding: 2rem;
+  overflow-y: auto;
+  animation: pageFadeIn 0.3s ease both;
 }
 
 /* Стили для навигационной панели */
@@ -29,17 +27,22 @@
   position: sticky;
   top: 0;
   z-index: 1000;
-  background-color: var(--white); /* Белый фон для навбара */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Тень для глубины */
 }
 
-/* Для адаптивности экрана добавим медиазапросы */
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Адаптивность */
 @media (max-width: 768px) {
   .home-layout__content {
-    padding: 15px;
-  }
-
-  .home-layout__wrapper {
-    flex-direction: column;
+    padding: 1rem;
   }
 }
