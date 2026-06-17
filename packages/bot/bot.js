@@ -132,6 +132,21 @@ app.get("/dis/userServers", async (req, res) => {
   }
 })
 
+app.post("/dis/userInfoFetch", async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).send("Не авторизован")
+  }
+  const userStat = await serverUserdb.findOne({
+    serverId: req.body.serverId,
+    userId: req.session.user.id,
+  })
+
+  if (userStat) {
+    return res.json(userStat)
+  }
+  return res.status(404).send("Пользователь не найден")
+})
+
 app.post("/dis/userHistoryFetch", async (req, res) => {
   if (!req.session.user) {
     return res.status(401).send("Не авторизован")
