@@ -17,8 +17,6 @@
     "express-session": "^1.18.1",
     "gif-encoder-2": "^1.0.5",
     "ioredis": "^5.4.1",
-    "jimp": "^0.22.7",
-    "minecraft-server-util": "^5.4.4",
     "mongoose": "^6.5.1",
     "node-html-parser": "^6.1.5",
     "opusscript": "^0.0.8",
