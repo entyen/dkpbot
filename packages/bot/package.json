@@ -34,14 +34,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/entyen/dbot.git"
+    "url": "git+https://github.com/entyen/dkpbot.git"
   },
   "author": "Entyen",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/entyen/dbot/issues"
+    "url": "https://github.com/entyen/dkpbot/issues"
   },
-  "homepage": "https://github.com/entyen/dbot#readme",
+  "homepage": "https://github.com/entyen/dkpbot#readme",
   "devDependencies": {
     "nodemon": "^2.0.12"
   }

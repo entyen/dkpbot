@@ -1,4 +1,4 @@
-# dbot
+# dkpbot
 
 My Private Bot for Discord
 

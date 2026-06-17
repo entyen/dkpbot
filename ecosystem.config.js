@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "@dbot/bot",
+      name: "@dkpbot/bot",
       script: "pnpm",
       args: "start",
       cwd: "./packages/bot",
