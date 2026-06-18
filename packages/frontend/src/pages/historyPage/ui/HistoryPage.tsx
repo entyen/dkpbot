@@ -10,6 +10,7 @@ interface HistoryItem {
   getterId: string
   givingPoints: number
   givingReason: string
+  date: string
 }
 
 export const HistoryPage = () => {
@@ -42,7 +43,12 @@ export const HistoryPage = () => {
             localStorage.clear()
             navigate("/login")
           } else if (response.data && response.data.length > 0) {
-            setHistoryData(response.data)
+            // Сортируем от нового к старому
+            const sortedData = response.data.sort(
+              (a: HistoryItem, b: HistoryItem) =>
+                new Date(b.date).getTime() - new Date(a.date).getTime()
+            )
+            setHistoryData(sortedData)
           } else {
             setHistoryData([])
           }
@@ -77,6 +83,18 @@ export const HistoryPage = () => {
   useEffect(() => {
     navigate("/history")
   }, [navigate])
+
+  // Форматирование даты
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleString("ru-RU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
 
   return (
     <section className="history-page">
@@ -117,6 +135,9 @@ export const HistoryPage = () => {
                       ? `+${item.givingPoints}`
                       : item.givingPoints}
                   </span>
+                </span>
+                <span className="history-date">
+                  <strong>Дата действия:</strong> {formatDate(item.date)}
                 </span>
               </div>
             </div>
