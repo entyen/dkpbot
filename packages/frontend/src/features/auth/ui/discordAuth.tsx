@@ -157,9 +157,9 @@ export const Dashboard = () => {
           Добро пожаловать, {user.global_name || user.username}!
         </h1>
         <p className="dashboard__subtitle">
-          <strong>Discord:</strong> {user.username}
           {currentUserData && (
             <>
+              <strong>Discord Name:</strong> {currentUserData.userName}
               <br />
               <strong>DKP:</strong> {currentUserData.dkpPoints}
               <br />
