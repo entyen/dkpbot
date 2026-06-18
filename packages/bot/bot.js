@@ -180,13 +180,6 @@ const CronJob = require("cron").CronJob
 const http = require("https")
 const fs = require("fs")
 const lang = JSON.parse(fs.readFileSync("en.json", "utf-8"))
-const {
-  parseTlServerStatus,
-  parseTlWeatherInfo,
-} = require("./module/throneandliberty/TlServerStatus.js")
-const {
-  parseImageForFindText,
-} = require("./module/throneandliberty/NameDetector.js")
 
 const bot = new Client({
   intents: [
@@ -659,13 +652,36 @@ bot.on("ready", (_) => {
   }
 })
 
-//activitySystem
-const {
-  acvititySystem,
-} = require("./module/server-currency-system/acvititySystem")
-acvititySystem(bot)
+//activitySystem DISABLE
+// const {
+//   acvititySystem,
+// } = require("./module/server-currency-system/acvititySystem")
+// acvititySystem(bot)
+
+const TARGET_CHANNEL_ID = '1294943882857025536';
+const TARGET_ROLE_ID = '1295320531918393365';
 
 bot.on("guildMemberUpdate", async (oldMember, newMember) => {
+  if (newMember.guild.id == TARGET_CHANNEL_ID && newMember.roles.cache.has(TARGET_ROLE_ID)) {
+    try {
+      const user = await serverUserdb.findOne({ userId: newMember.user.id })
+
+      if (!user) {
+        user = new serverUserdb({
+          serverId: newMember.guild.id,
+          userId: newMember.user.id,
+          userName: newMember.nickname || null
+        });
+      } else {
+        user.userName = newMember.nickname || null;
+      }
+
+      await user.save()
+    } catch (error) {
+      console.error(`Ошибка:`, error);
+    }
+  }
+
   let role = await roledb.find({})
   role.forEach(async (r) => {
     const roleId = r.roleId
@@ -1020,9 +1036,32 @@ stdin.addListener("data", async (d) => {
   d = d.toString().trim()
   if (d == "delg") {
     deleteAllGlobalCommands()
-  } else if (d == "qq") {
-    const status = await parseTlWeatherInfo("Europe")
-    console.log(status)
+  } else if (d == "uunames") {
+    try {
+      const guild = await bot.guilds.fetch('1294943882857025536');
+      const members = await guild.members.fetch();
+      const roleMembers = members.filter(m => m.roles.cache.has('1295320531918393365'));
+
+      let updated = 0;
+      let created = 0;
+
+      for (const [id, member] of roleMembers) {
+        let user = await serverUserdb.findOne({ userId: id });
+
+        if (!user) {
+          created++;
+        } else {
+          user.userName = member.nickname || null;
+          updated++;
+        }
+
+        await user.save();
+      }
+
+      console.log(`Готово! Обновлено: ${updated}, Создано: ${created}, Всего: ${roleMembers.size}`);
+    } catch (error) {
+      console.error('Ошибка:', error);
+    }
   }
 })
 
