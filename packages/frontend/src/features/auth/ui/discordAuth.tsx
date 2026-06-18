@@ -34,7 +34,7 @@ export const DiscordLoginButton = () => {
 export const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  const [serverUserData, setServerUserData] = useState<ServerUser[] | null>(null);
+  const [serverUserData, setServerUserData] = useState<ServerUser | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -80,7 +80,7 @@ export const Dashboard = () => {
         return;
       }
 
-      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+      if (typeof response.data === "object" && response.data._id) {
         setServerUserData(response.data);
         setError(null);
       } else {
@@ -148,7 +148,7 @@ export const Dashboard = () => {
     );
   }
 
-  const currentUserData = serverUserData?.[0];
+  const currentUserData = serverUserData;
 
   return (
     <div className="dashboard">
