@@ -157,7 +157,15 @@ app.post("/dis/userHistoryFetch", async (req, res) => {
   })
 
   if (logs.length > 0) {
-    return res.json(logs)
+    const logsWithDate = logs.map(log => {
+      const timestamp = log._id.getTimestamp();
+
+      return {
+        ...log.toObject ? log.toObject() : log,
+        date: timestamp
+      }
+    });
+    return res.json(logsWithDate)
   } else {
     return res.status(404).send("История не найдена")
   }
@@ -503,13 +511,11 @@ bot.on("ready", (_) => {
       }
 
       await interaction.reply({
-        content: `**Баланс**:\n> ${
-          serverInfo?.serverCurrencyName || "DKP"
-        }: **${serverUserInfo?.dkpPoints || 0} ${
-          pointsEmoji || ""
-        }**\n**Активность**: ${calculateActivity(
-          serverUserInfo?.activityPoints
-        )}`,
+        content: `**Баланс**:\n> ${serverInfo?.serverCurrencyName || "DKP"
+          }: **${serverUserInfo?.dkpPoints || 0} ${pointsEmoji || ""
+          }**\n**Активность**: ${calculateActivity(
+            serverUserInfo?.activityPoints
+          )}`,
         ephemeral: true,
       })
     } else if (interaction.commandName === "Donate Aden") {
@@ -602,11 +608,9 @@ bot.on("ready", (_) => {
         dkpGiveInput > 0 ? "выданы пользователю" : "забраны у пользователя"
       await targetDkpUser.save()
       await interaction.reply({
-        content: `**${Math.abs(dkpGiveInput)} ${
-          pointsEmoji || "очков"
-        }** успешно ${giveOrGet} <@${targetDkpUser.userId}>!\n**Причина:** ${
-          dkpGiveReason || "Не указана"
-        }`,
+        content: `**${Math.abs(dkpGiveInput)} ${pointsEmoji || "очков"
+          }** успешно ${giveOrGet} <@${targetDkpUser.userId}>!\n**Причина:** ${dkpGiveReason || "Не указана"
+          }`,
       })
     }
   })
@@ -779,7 +783,7 @@ bot.on("messageCreate", async (message) => {
       for (let i = 0; i < cmt; i++) {
         const fomula = Math.floor(
           (((1 + Math.sqrt(5)) / 2) ** i - ((1 - Math.sqrt(5)) / 2) ** i) /
-            Math.sqrt(5)
+          Math.sqrt(5)
         )
         if (fomula >= Number.MAX_SAFE_INTEGER) break
         fibArr.push(fomula)
@@ -973,9 +977,8 @@ bot.on("interactionCreate", async (inter) => {
             userFromDB.dkpPoints += pointsCount
             await userFromDB.save()
 
-            replySummary += `<@${userId}>: **${Math.abs(pointsCount)} ${
-              pointsEmoji || "Очков"
-            }**\n`
+            replySummary += `<@${userId}>: **${Math.abs(pointsCount)} ${pointsEmoji || "Очков"
+              }**\n`
           } catch (error) {
             console.error(
               `Ошибка при выдаче очков пользователю ${userId}:`,
