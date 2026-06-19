@@ -1,1 +1,1 @@
-export { DiscordLoginButton, Dashboard } from './auth'
+export { DiscordLoginButton } from './auth'

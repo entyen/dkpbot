@@ -1,0 +1,19 @@
+export interface ServerUser {
+  _id: string;
+  serverId: string;
+  userId: string;
+  userName: string;
+  serverRole: string;
+  dkpPoints: number;
+  activityPoints: number;
+}
+
+export interface HistoryItem {
+  _id: string
+  serverId: string
+  giverId: string
+  getterId: string
+  givingPoints: number
+  givingReason: string
+  date: string
+}

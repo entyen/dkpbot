@@ -2,16 +2,7 @@ import "./historyPage.scss"
 import { useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
 import axios from "axios"
-
-interface HistoryItem {
-  _id: string
-  serverId: string
-  giverId: string
-  getterId: string
-  givingPoints: number
-  givingReason: string
-  date: string
-}
+import { HistoryItem } from "@/shared/types"
 
 export const HistoryPage = () => {
   const navigate = useNavigate()

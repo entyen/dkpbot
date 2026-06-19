@@ -2,8 +2,7 @@ import "../styles/index.scss";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { HomeLayout } from "../layout";
 import { Fallback } from "@/shared/ui";
-import { HistoryPage, HomePage, LoginPage } from "@/pages";
-import { Dashboard } from "@/features";
+import { HistoryPage, HomePage, LoginPage, DashboardPage } from "@/pages";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 const router = createBrowserRouter([
@@ -22,7 +21,7 @@ const router = createBrowserRouter([
           },
           {
             path: "dashboard",
-            element: <Dashboard />,
+            element: <DashboardPage />,
           },
           {
             path: "history",
