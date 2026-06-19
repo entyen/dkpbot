@@ -6,7 +6,7 @@ export const HomePage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    navigate("/");
+    navigate("/dashboard");
   }, [navigate]);
   return (
     <section className="home-page">
