@@ -7,6 +7,11 @@
     "packages/*"
   ],
   "private": true,
-  "scripts": {},
+  "scripts": {
+    "build:frontend": "pnpm --filter @dkpapp/frontend build",
+    "dev:frontend": "pnpm --filter @dkpapp/frontend dev",
+    "build": "pnpm build:frontend",
+    "dev": "pnpm dev:frontend"
+  },
   "devDependencies": {}
 }
