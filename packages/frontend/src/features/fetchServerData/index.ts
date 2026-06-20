@@ -1,2 +1,2 @@
 export { fetchServerUserData } from './script/FetchServerUserData';
-export { fetchHistoryData } from './script/FetchHistoryData';
+export { fetchUserHistoryData } from './script/FetchUserHistoryData';

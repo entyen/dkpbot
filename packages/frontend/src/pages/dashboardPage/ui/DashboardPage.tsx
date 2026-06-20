@@ -1,13 +1,14 @@
 import "./dashboardPage.scss"
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
-import { User, ServerUser } from "@/shared/types";
+import { User, ServerUser, Server } from "@/shared/types";
 import { fetchServerUserData } from "@/features";
 
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
+  const [server, setServer] = useState<Server | null>(null);
   const [serverUserData, setServerUserData] = useState<ServerUser | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,10 +27,26 @@ export const DashboardPage = () => {
     }
   }, []);
 
+  const loadServersFromLocalStorage = useCallback(() => {
+    const storedServers = localStorage.getItem("servers");
+    if (storedServers) {
+      try {
+        setServer(JSON.parse(storedServers) as Server)
+      } catch (e) {
+        console.error("Ошибка парсинга servers:", e);
+        setServer(null);
+      }
+    } else {
+      setError("Данные отсутствуют в localStorage.");
+      return setServer(null);
+    }
+  }, []);
+
   // Объединенный эффект для загрузки данных
   useEffect(() => {
     setIsLoading(true);
     loadUserFromLocalStorage();
+    loadServersFromLocalStorage();
     fetchServerUserData({
       navigate,
       setServerUserData,
@@ -88,21 +105,22 @@ export const DashboardPage = () => {
   }
 
   const currentUserData = serverUserData;
+  currentUserData
 
   return (
     <div className="dashboard">
       <div className="dashboard__card">
         <h1 className="dashboard__title">
-          Добро пожаловать, {user.global_name || user.username}!
+          <strong>Информация о сервере</strong>
         </h1>
         <p className="dashboard__subtitle">
-          {currentUserData && (
+          {server?.selectedServer && (
             <>
-              <strong>Discord Name:</strong> {currentUserData.userName}
+              <strong>Server Name:</strong> {server?.selectedServer?.serverName}
               <br />
-              <strong>DKP:</strong> {currentUserData.dkpPoints}
+              <strong>Server ID:</strong> {server?.selectedServer?.serverId}
               <br />
-              <strong>Роль:</strong> {currentUserData.serverRole}
+              <strong>Currency Emoji:</strong> {server?.selectedServer?.serverCurrencyEmoji}
             </>
           )}
         </p>

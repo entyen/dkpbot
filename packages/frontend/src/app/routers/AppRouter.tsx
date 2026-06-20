@@ -16,7 +16,7 @@ const router = createBrowserRouter([
         errorElement: <Fallback />,
         children: [
           {
-            path: "",
+            path: "/",
             element: <HomePage />,
           },
           {

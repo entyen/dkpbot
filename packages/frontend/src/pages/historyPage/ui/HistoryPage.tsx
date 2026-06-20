@@ -2,7 +2,7 @@ import "./historyPage.scss"
 import { useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { HistoryItem } from "@/shared/types"
-import { fetchHistoryData } from "@/features/fetchServerData"
+import { fetchUserHistoryData } from "@/features/fetchServerData"
 
 export const HistoryPage = () => {
   const navigate = useNavigate()
@@ -10,7 +10,7 @@ export const HistoryPage = () => {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchHistoryData({
+    fetchUserHistoryData({
       navigate,
       setHistoryData,
       setError,
@@ -18,7 +18,7 @@ export const HistoryPage = () => {
 
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === "servers") {
-        fetchHistoryData({
+        fetchUserHistoryData({
           navigate,
           setHistoryData,
           setError,

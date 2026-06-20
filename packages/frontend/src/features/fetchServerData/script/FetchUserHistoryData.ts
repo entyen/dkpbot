@@ -7,7 +7,7 @@ interface FetchHistoryDataParams {
   setError: (error: string | null) => void;
 }
 
-export const fetchHistoryData = async ({
+export const fetchUserHistoryData = async ({
   navigate,
   setHistoryData,
   setError,

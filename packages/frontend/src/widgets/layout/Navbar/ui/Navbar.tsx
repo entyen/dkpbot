@@ -83,10 +83,10 @@ export const Navbar = () => {
 
         {/* Меню */}
         <div className="menu">
-          {/* <a href="/">Home</a> */}
+          <a href="/">Home</a>
           <a href="/dashboard">Dashboard</a>
           <a href="/history">History</a>
-          {/* <a href="/">About</a> */}
+          {/* <a href="/about">About</a> */}
         </div>
       </nav>
     </article>
