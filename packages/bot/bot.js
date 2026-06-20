@@ -147,6 +147,29 @@ app.post("/dis/userInfoFetch", async (req, res) => {
   return res.status(404).send("Пользователь не найден")
 })
 
+app.post("/dis/serverHistoryFetch", async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).send("Не авторизован")
+  }
+  const logs = await pointsdb.find({
+    serverId: req.body.serverId,
+  })
+
+  if (logs.length > 0) {
+    const logsWithDate = logs.map(log => {
+      const timestamp = log._id.getTimestamp();
+
+      return {
+        ...log.toObject ? log.toObject() : log,
+        date: timestamp
+      }
+    });
+    return res.json(logsWithDate)
+  } else {
+    return res.status(404).send("История не найдена")
+  }
+})
+
 app.post("/dis/userHistoryFetch", async (req, res) => {
   if (!req.session.user) {
     return res.status(401).send("Не авторизован")
@@ -168,6 +191,33 @@ app.post("/dis/userHistoryFetch", async (req, res) => {
     return res.json(logsWithDate)
   } else {
     return res.status(404).send("История не найдена")
+  }
+})
+
+app.post("/dis/usersBulkFetch", async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).send("Не авторизован")
+  }
+
+  const { serverId, userIds } = req.body;
+
+  // Формируем запрос
+  const query = { serverId };
+
+  if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+    query.userId = { $in: userIds };
+  }
+
+  try {
+    const usersData = await serverUserdb.find(query); // или просто find() если Mongoose
+    if (usersData && usersData.length > 0) {
+      return res.json(usersData);
+    } else {
+      return res.json([]); // Возвращаем пустой массив вместо 404
+    }
+  } catch (error) {
+    console.error("Ошибка получения пользователей:", error);
+    return res.status(500).send("Ошибка сервера");
   }
 })
 
@@ -664,16 +714,17 @@ const TARGET_ROLE_ID = '1295320531918393365';
 bot.on("guildMemberUpdate", async (oldMember, newMember) => {
   if (newMember.guild.id == TARGET_CHANNEL_ID && newMember.roles.cache.has(TARGET_ROLE_ID)) {
     try {
-      const user = await serverUserdb.findOne({ userId: newMember.user.id })
+      const findNickName = newMember?.nickname ?? newMember?.user?.globalName ?? null
+      const user = await serverUserdb.findOne({ serverId: newMember.guild.id, userId: newMember.user.id })
 
       if (!user) {
         user = new serverUserdb({
           serverId: newMember.guild.id,
           userId: newMember.user.id,
-          userName: newMember.nickname || null
+          userName: findNickName
         });
       } else {
-        user.userName = newMember.nickname || null;
+        user.userName = findNickName;
       }
 
       await user.save()

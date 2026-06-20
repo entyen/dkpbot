@@ -2,7 +2,7 @@ import "./historyPage.scss"
 import { useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { HistoryItem } from "@/shared/types"
-import { fetchUserHistoryData } from "@/features/fetchServerData"
+import { fetchUserHistoryData } from "@/features"
 import { useDocumentTitle } from "@/shared/hooks"
 
 export const HistoryPage = () => {
