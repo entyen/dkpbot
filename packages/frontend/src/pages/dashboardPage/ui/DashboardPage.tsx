@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import { User, ServerUser, Server } from "@/shared/types";
 import { fetchServerUserData } from "@/features";
-
+import { useDocumentTitle } from "@/shared/hooks";
 
 export const DashboardPage = () => {
+  useDocumentTitle("Server Dashboard")
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [server, setServer] = useState<Server | null>(null);

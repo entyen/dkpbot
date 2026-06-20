@@ -1,7 +1,10 @@
 import { DiscordLoginButton } from "@/features";
 import "./loginPage.scss";
+import { useDocumentTitle } from "@/shared/hooks";
 
 export const LoginPage = () => {
+  useDocumentTitle("Login Page")
+
   return (
     <div className="LoginPage">
       <div className="LoginPage__card">

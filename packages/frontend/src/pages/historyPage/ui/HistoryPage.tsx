@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { HistoryItem } from "@/shared/types"
 import { fetchUserHistoryData } from "@/features/fetchServerData"
+import { useDocumentTitle } from "@/shared/hooks"
 
 export const HistoryPage = () => {
+  useDocumentTitle("User Points History")
   const navigate = useNavigate()
   const [historyData, setHistoryData] = useState<HistoryItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)

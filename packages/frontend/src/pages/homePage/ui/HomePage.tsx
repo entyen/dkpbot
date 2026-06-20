@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import { User, ServerUser } from "@/shared/types";
 import { fetchServerUserData } from "@/features";
+import { useDocumentTitle } from "@/shared/hooks";
 
 export const HomePage = () => {
+  useDocumentTitle("User Home Page")
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [serverUserData, setServerUserData] = useState<ServerUser | null>(null);
