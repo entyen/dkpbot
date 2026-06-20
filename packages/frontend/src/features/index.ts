@@ -1,2 +1,2 @@
 export { DiscordLoginButton } from './auth'
-export { fetchServerUserData } from './fetchServerData';
+export { fetchServerUserData, fetchHistoryData } from './fetchServerData';

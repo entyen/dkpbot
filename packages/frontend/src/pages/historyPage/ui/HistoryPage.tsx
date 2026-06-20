@@ -1,66 +1,28 @@
 import "./historyPage.scss"
 import { useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
-import axios from "axios"
 import { HistoryItem } from "@/shared/types"
+import { fetchHistoryData } from "@/features/fetchServerData"
 
 export const HistoryPage = () => {
   const navigate = useNavigate()
   const [historyData, setHistoryData] = useState<HistoryItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchHistory = async () => {
-    try {
-      const servers = localStorage.getItem("servers")
-
-      if (servers) {
-        const parsedServers = JSON.parse(servers)
-
-        if (parsedServers.selectedServer?.serverId) {
-          const response = await axios.post(
-            "https://api.grk.pw/dis/userHistoryFetch",
-            {
-              serverId: parsedServers.selectedServer.serverId,
-            },
-            {
-              withCredentials: true,
-              validateStatus: (status) => {
-                return (status >= 200 && status < 300) || status === 401
-              },
-            }
-          )
-
-          if (response.status == 401) {
-            localStorage.clear()
-            navigate("/login")
-          } else if (response.data && response.data.length > 0) {
-            // Сортируем от нового к старому
-            const sortedData = response.data.sort(
-              (a: HistoryItem, b: HistoryItem) =>
-                new Date(b.date).getTime() - new Date(a.date).getTime()
-            )
-            setHistoryData(sortedData)
-          } else {
-            setHistoryData([])
-          }
-        } else {
-          setError("Некорректные данные пользователя или сервера.")
-        }
-      } else {
-        setError("Данные отсутствуют в localStorage.")
-      }
-    } catch (error) {
-      console.error("Ошибка при получении истории:", error)
-      setError("Нет данных.")
-    }
-  }
-
   useEffect(() => {
-    fetchHistory()
+    fetchHistoryData({
+      navigate,
+      setHistoryData,
+      setError,
+    })
 
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === "servers") {
-        fetchHistory()
+        fetchHistoryData({
+          navigate,
+          setHistoryData,
+          setError,
+        })
       }
     }
 
@@ -69,7 +31,7 @@ export const HistoryPage = () => {
     return () => {
       window.removeEventListener("storage", handleStorageChange)
     }
-  }, [])
+  }, [navigate])
 
   useEffect(() => {
     navigate("/history")
