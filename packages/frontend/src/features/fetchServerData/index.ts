@@ -1,0 +1,1 @@
+export { fetchServerUserData } from './script/FetchServerUserData';
