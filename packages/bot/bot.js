@@ -554,13 +554,16 @@ bot.on("ready", (_) => {
       }
 
       await interaction.reply({
-        content: `**Баланс**:\n> ${serverInfo?.serverCurrencyName || "DKP"
-          }: **${serverUserInfo?.dkpPoints || 0} ${pointsEmoji || ""
-          }**\n**Активность**: ${calculateActivity(
-            serverUserInfo?.activityPoints
-          )}`,
+        content: `
+          🏆 **Баланс**
+          > ${serverInfo?.serverCurrencyName || "DKP"}: **${serverUserInfo?.dkpPoints || 0} ${pointsEmoji || "💎"}**
+          
+          👤 **Никнейм**: ${serverUserInfo?.userName}
+
+          🔥 **Активность**: ${calculateActivity(serverUserInfo?.activityPoints)}
+          `.trim(),
         ephemeral: true,
-      })
+      });
     } else if (interaction.commandName === "Donate Aden") {
       const modal = new ModalBuilder()
         .setCustomId(`adenaDonate:${iUser.userid}`)
@@ -715,19 +718,12 @@ bot.on("guildMemberUpdate", async (oldMember, newMember) => {
   if (newMember.guild.id == TARGET_CHANNEL_ID && newMember.roles.cache.has(TARGET_ROLE_ID)) {
     try {
       const findNickName = newMember?.nickname ?? newMember?.user?.globalName ?? null
-      const user = await serverUserdb.findOne({ serverId: newMember.guild.id, userId: newMember.user.id })
 
-      if (!user) {
-        user = new serverUserdb({
-          serverId: newMember.guild.id,
-          userId: newMember.user.id,
-          userName: findNickName
-        });
-      } else {
-        user.userName = findNickName;
-      }
-
-      await user.save()
+      await serverUserdb.findOneAndUpdate(
+        { serverId: newMember.guild.id, userId: newMember.user.id },
+        { $set: { userName: findNickName } },
+        { upsert: true, new: true }
+      )
     } catch (error) {
       console.error(`Ошибка:`, error);
     }
@@ -1025,11 +1021,14 @@ bot.on("interactionCreate", async (inter) => {
 
         for (const userId of userIds) {
           try {
-            const userFromDB = await serverUserdb.findOne({ serverId, userId })
-            if (!userFromDB) {
-              replySummary += `<@${userId}>: Пользователь не найден в базе данных\n`
-              continue
-            }
+            await serverUserdb.findOneAndUpdate(
+              { serverId, userId },
+              {
+                $inc: { dkpPoints: pointsCount },
+                $setOnInsert: { userName: null } // устанавливается только при создании
+              },
+              { upsert: true, new: true }
+            )
 
             // Создание записи о выдаче очков
             await pointsdb.create({
@@ -1040,17 +1039,9 @@ bot.on("interactionCreate", async (inter) => {
               givingReason: giveReason,
             })
 
-            // Обновление очков пользователя
-            userFromDB.dkpPoints += pointsCount
-            await userFromDB.save()
-
-            replySummary += `<@${userId}>: **${Math.abs(pointsCount)} ${pointsEmoji || "Очков"
-              }**\n`
+            replySummary += `<@${userId}>: **${Math.abs(pointsCount)} ${pointsEmoji || "Очков"}**\n`
           } catch (error) {
-            console.error(
-              `Ошибка при выдаче очков пользователю ${userId}:`,
-              error
-            )
+            console.error(`Ошибка при выдаче очков пользователю ${userId}:`, error)
             replySummary += `<@${userId}>: Ошибка при выдаче очков\n`
           }
         }
