@@ -555,13 +555,11 @@ bot.on("ready", (_) => {
 
       await interaction.reply({
         content: `
-          🏆 **Баланс**
-          > ${serverInfo?.serverCurrencyName || "DKP"}: **${serverUserInfo?.dkpPoints || 0} ${pointsEmoji || "💎"}**
-          
-          👤 **Никнейм**: ${serverUserInfo?.userName}
-
-          🔥 **Активность**: ${calculateActivity(serverUserInfo?.activityPoints)}
-          `.trim(),
+👤 **Никнейм**: ${serverUserInfo?.userName}
+🔥 **Активность**: ${calculateActivity(serverUserInfo?.activityPoints)}
+🏆 **Баланс**
+> ${serverInfo?.serverCurrencyName || "DKP"}: **${serverUserInfo?.dkpPoints || 0} ${pointsEmoji || "💎"}**
+  `.trim(),
         ephemeral: true,
       });
     } else if (interaction.commandName === "Donate Aden") {
@@ -706,10 +704,27 @@ bot.on("ready", (_) => {
 })
 
 //activitySystem DISABLE
-// const {
-//   acvititySystem,
-// } = require("./module/server-currency-system/acvititySystem")
-// acvititySystem(bot)
+const {
+  acvititySystem,
+} = require("./module/server-currency-system/acvititySystem")
+acvititySystem(bot)
+
+bot.on("guildMemberRemove", async (member) => {
+  try {
+    const serverId = member.guild.id
+    const serverFromDb = await serverdb.findOne({ serverId })
+    if (serverFromDb && serverFromDb?.logChannelId) {
+      const logChannel = member.guild.channels.cache.get(serverFromDb.logChannelId);
+      if (logChannel) {
+        await logChannel.send(
+          `👋 **<@${member.id}>** покинул сервер.`
+        );
+      }
+    }
+  } catch (e) {
+    console.error('Ошибка в guildMemberRemove:', e);
+  }
+})
 
 const TARGET_CHANNEL_ID = '1294943882857025536';
 const TARGET_ROLE_ID = '1295320531918393365';

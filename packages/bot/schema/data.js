@@ -25,6 +25,7 @@ const serverSchema = new Schema({
   serverId: { type: String, require: true, unique: true },
   serverName: { type: String, default: null },
   active: { type: Boolean, default: true },
+  logChannelId: { type: String, default: null },
   serverCurrencyName: { type: String, default: null },
   serverCurrencyEmoji: { type: String, default: null },
   whoCanTransferCurrency: { type: String, default: null },
