@@ -312,106 +312,11 @@ bot.on("ready", (_) => {
 
   // slash commands register
   const commands = [
-    new SlashCommandBuilder().setName("balance").setDescription(lang[5]),
-    new SlashCommandBuilder()
-      .setName("farm")
-      .setDescription(lang[9])
-      .addUserOption((option) =>
-        option.setName("user").setDescription("User").setRequired(true)
-      ),
-    new SlashCommandBuilder()
-      .setName("bumpkin")
-      .setDescription(lang[10])
-      .addUserOption((option) =>
-        option.setName("user").setDescription("User").setRequired(true)
-      ),
-    new SlashCommandBuilder()
-      .setName("pay")
-      .setDescription("Pay to user")
-      .addUserOption((option) =>
-        option.setName("user").setDescription("User to pay").setRequired(true)
-      )
-      .addNumberOption((option) =>
-        option
-          .setName("amount")
-          .setDescription("Amount to pay")
-          .setRequired(true)
-      ),
-    new SlashCommandBuilder()
-      .setName("calc")
-      .setDescription("Calc cripto cource")
-      .addNumberOption((option) =>
-        option
-          .setName("value")
-          .setDescription("Value to calculate")
-          .setRequired(true)
-      ),
-    new SlashCommandBuilder()
-      .setName("fine")
-      .setNameLocalizations({
-        ru: "штраф",
-      })
-      .setDescription("Add fine to user")
-      .setDescriptionLocalizations({ ru: "Добавить штраф пользователю" })
-      .addUserOption((option) =>
-        option
-          .setName("user")
-          .setNameLocalizations({ ru: "пользователь" })
-          .setDescription("Select user")
-          .setRequired(true)
-      )
-      .addNumberOption((option) =>
-        option
-          .setName("amount")
-          .setNameLocalizations({ ru: "сумма" })
-          .setDescription("Amount to fine")
-          .setDescriptionLocalizations({ ru: "Сумма штрафа" })
-          .setRequired(true)
-          .setMaxValue(10000)
-          .setChoices({
-            name: "1000",
-            value: 1000,
-          })
-      ),
-    new SlashCommandBuilder()
-      .setName("checkfine")
-      .setNameLocalizations({ ru: "проверитьштраф" })
-      .setDescription("Check user fine")
-      .setDescriptionLocalizations({ ru: "Проверить штраф пользователя" })
-      .addUserOption((option) =>
-        option
-          .setName("user")
-          .setNameLocalizations({ ru: "пользователь" })
-          .setDescription("User")
-          .setRequired(true)
-      ),
     new ContextMenuCommandBuilder()
       .setName("User Information")
       .setNameLocalizations({ ru: "Информация о пользователе" })
-      .setType(ApplicationCommandType.User),
-    // .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-    new ContextMenuCommandBuilder()
-      .setName("User Balance")
-      .setNameLocalizations({ ru: "Баланс пользователя" })
-      .setType(ApplicationCommandType.User),
-    new ContextMenuCommandBuilder()
-      .setName("Donate Aden")
-      .setNameLocalizations({ ru: "Задонить Адены" })
-      .setType(ApplicationCommandType.User),
-    new SlashCommandBuilder()
-      .setName("popusk")
-      .setNameLocalizations({ ru: "попуск" })
-      .setDescription("Set user popusk")
-      .setDescriptionLocalizations({ ru: "Установить попуск пользователя" })
-      .addStringOption((option) =>
-        option
-          .setName("name")
-          .setNameLocalizations({ ru: "имя" })
-          .setDescription("Popusk name")
-          .setDescriptionLocalizations({ ru: "Имя попуска" })
-          .setRequired(true)
-      ),
-    new SlashCommandBuilder().setName("walletset").setDescription(lang[8]),
+      .setType(ApplicationCommandType.User)
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     new ContextMenuCommandBuilder()
       .setName("Point Balance")
       .setNameLocalizations({ ru: "Баланс очков" })
@@ -482,11 +387,6 @@ bot.on("ready", (_) => {
           `User: <@${iUser}>\n\n **Balance**: ${iUser.balance} ${currency}\n **Fine**: ${iUser.fine} ${currency}`
         )
       await interaction.reply({ embeds: [embed] })
-    } else if (interaction.commandName === "User Balance") {
-      await interaction.reply({
-        content: `${iUser.balance} Aden`,
-        ephemeral: true,
-      })
     } else if (interaction.commandName === "Give Points") {
       const serverInfo = await serverdb.findOne({
         serverId: interaction?.guildId,
@@ -562,26 +462,6 @@ bot.on("ready", (_) => {
   `.trim(),
         ephemeral: true,
       });
-    } else if (interaction.commandName === "Donate Aden") {
-      const modal = new ModalBuilder()
-        .setCustomId(`adenaDonate:${iUser.userid}`)
-        .setTitle("Adena Donation")
-
-      const adenaDonateInput = new TextInputBuilder()
-        .setCustomId("adenaDonateInput")
-        .setLabel("How many adena you want to Donate?")
-        .setMaxLength(3)
-        .setMinLength(1)
-        .setValue("3")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true)
-
-      const secondActionRow = new ActionRowBuilder().addComponents(
-        adenaDonateInput
-      )
-
-      modal.addComponents(secondActionRow)
-      await interaction.showModal(modal)
     }
   })
 
@@ -590,32 +470,7 @@ bot.on("ready", (_) => {
 
     const [modalId, userId] = interaction.customId.split(":")
 
-    if (modalId === "adenaDonate" && userId) {
-      const targetUser = await userdb.findOne({
-        userid: userId,
-      })
-      const selfUser = await userdb.findOne({
-        userid: interaction.user.id,
-      })
-
-      const adenaDonateInput =
-        interaction.fields.getTextInputValue("adenaDonateInput")
-      if (isNaN(adenaDonateInput) || adenaDonateInput <= 0) {
-        return await interaction.reply({
-          content: "Ошибка: Введите корректное число!",
-          ephemeral: true,
-        })
-      }
-
-      selfUser.balance -= +adenaDonateInput
-      targetUser.balance += +adenaDonateInput
-      await selfUser.save()
-      await targetUser.save()
-      await interaction.reply({
-        content: `You succecful send ${adenaDonateInput} Adena to <@${targetUser.userid}>`,
-        ephemeral: true,
-      })
-    } else if (modalId === "dkpGive" && userId) {
+    if (modalId === "dkpGive" && userId) {
       const _serverData = await serverdb.findOne({
         serverId: interaction.guildId,
       })
@@ -666,10 +521,6 @@ bot.on("ready", (_) => {
       const CLIENT_ID = bot.user.id
       const GUILD_ID = GUILD.id
 
-      const commandsToUpload = ["570707745028964353"].includes(GUILD_ID)
-        ? commands
-        : commands.slice(12)
-
       const server = await serverdb.findOne({ serverId: GUILD.id })
       if (!server) {
         const newServer = await serverdb.create({
@@ -695,7 +546,7 @@ bot.on("ready", (_) => {
       })
 
       await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), {
-        body: commandsToUpload,
+        body: commands,
       })
     })
   } catch (error) {
@@ -717,7 +568,7 @@ bot.on("guildMemberRemove", async (member) => {
       const logChannel = member.guild.channels.cache.get(serverFromDb.logChannelId);
       if (logChannel) {
         await logChannel.send(
-          `👋 **<@${member.id}>** покинул сервер.`
+          `👋 **<@${member.id}>** (${member?.nickname ?? member?.user?.globalName ?? null}) покинул сервер.`
         );
       }
     }
