@@ -1086,6 +1086,59 @@ stdin.addListener("data", async (d) => {
     } catch (error) {
       console.error('Ошибка:', error);
     }
+  } else if (d == "uuroles") {
+    try {
+      const guild = await bot.guilds.fetch('1294943882857025536');
+      const members = await guild.members.fetch();
+
+      let updated = 0;
+      let created = 0;
+      let skipped = 0;
+
+      for (const [id, member] of members) {
+        // Пропускаем ботов
+        if (member.user.bot) {
+          skipped++;
+          continue;
+        }
+
+        // Получаем роли пользователя (исключая @everyone)
+        const roles = member.roles.cache
+          .filter(role => role.id !== guild.id)
+          .map(role => ({
+            roleName: role.name,
+            roleId: role.id
+          }));
+
+        // Находим или создаём запись в базе
+        let user = await serverUserdb.findOne({
+          serverId: guild.id,
+          userId: id
+        });
+
+        if (!user) {
+          user = new serverUserdb({
+            serverId: guild.id,
+            userId: id,
+            userName: member.nickname || member.user.globalName || null,
+            serverRoles: roles,
+            serverRole: roles.length > 0 ? roles[0].roleName : null
+          });
+          created++;
+        } else {
+          user.serverRoles = roles;
+          user.serverRole = roles.length > 0 ? roles[0].roleName : null;
+          updated++;
+        }
+
+        await user.save();
+      }
+
+      console.log(`✅ uuroles: Обновлено: ${updated}, Создано: ${created}, Пропущено ботов: ${skipped}, Всего: ${members.size}`);
+    } catch (error) {
+      console.error('❌ Ошибка в uuroles:', error);
+    }
+
   }
 })
 
