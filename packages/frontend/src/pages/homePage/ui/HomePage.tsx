@@ -7,9 +7,31 @@ import { useDocumentTitle } from "@/shared/hooks";
 import { PointsBadge } from "@/shared/ui";
 
 // Небольшой хелпер для читаемого формата даты
-const formatDate = (dateString?: string) => {
-  if (!dateString) return "WIP";
-  return new Date(dateString).toLocaleDateString("ru-RU", {
+const extractDateFromObjectId = (objectId: string): Date | null => {
+  if (!objectId || objectId.length < 8) return null;
+  // Берём первые 8 символов (4 байта) и конвертируем в timestamp
+  const timestamp = parseInt(objectId.substring(0, 8), 16);
+  return new Date(timestamp * 1000);
+};
+
+const formatDate = (dateSource?: string | Date): string => {
+  if (!dateSource) return "—";
+  
+  let date: Date | null = null;
+  
+  if (typeof dateSource === "string" && /^[a-f\d]{24}$/i.test(dateSource)) {
+    // Похоже на ObjectId
+    date = extractDateFromObjectId(dateSource);
+  } else if (typeof dateSource === "string") {
+    // Обычная дата-строка
+    date = new Date(dateSource);
+  } else if (dateSource instanceof Date) {
+    date = dateSource;
+  }
+  
+  if (!date || isNaN(date.getTime())) return "—";
+  
+  return date.toLocaleDateString("ru-RU", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -151,12 +173,6 @@ export const HomePage = () => {
               <h3 className="home__section-title">Статистика</h3>
               <ul className="home__info-list">
                 <li>
-                  <span className="home__info-label">Всего очков:</span>
-                  <span className="home__info-value">
-                    {currentUserData.dkpPoints + currentUserData.activityPoints}
-                  </span>
-                </li>
-                <li>
                   <span className="home__info-label">Последняя активность:</span>
                   <span className="home__info-value">
                     {formatDate(currentUserData.updatedAt || currentUserData.createdAt)}
@@ -165,7 +181,7 @@ export const HomePage = () => {
                 <li>
                   <span className="home__info-label">Регистрация:</span>
                   <span className="home__info-value">
-                    {formatDate(currentUserData.createdAt)}
+                    {formatDate(currentUserData._id)}
                   </span>
                 </li>
               </ul>
