@@ -689,7 +689,8 @@ bot.on("guildMemberUpdate", async (oldMember, newMember) => {
     const server = await serverdb.findOne({ serverId: newMember.guild.id })
 
     if (!server?.verificationRoleId) return
-    if (newMember.guild.id == server.id && newMember.roles.cache.has(server.verificationRoleId)) {
+    console.log(newMember.roles.cache.has(server.verificationRoleId))
+    if (newMember.guild.id == server.serverId && newMember.roles.cache.has(server.verificationRoleId)) {
       const findNickName = newMember?.nickname ?? newMember?.user?.globalName ?? null
 
       await serverUserdb.findOneAndUpdate(
