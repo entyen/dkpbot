@@ -1,0 +1,45 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.4;
+  min-width: 48px;
+  background: rgba(255, 255, 255, 0.05);
+  user-select: none;
+}
+
+// Варианты оформления (приглушенные, пастельные тона)
+.dkp {
+  color: #4caf50;
+  background: rgba(76, 175, 80, 0.1);
+  box-shadow: 0 0 16px rgba(144, 238, 144, 0.06);
+}
+
+.rating {
+  color: #8ecae6;
+  background: rgba(100, 200, 255, 0.08);
+  box-shadow: 0 0 16px rgba(100, 200, 255, 0.06);
+}
+
+.score {
+  color: #f5d98e;
+  background: rgba(255, 215, 0, 0.08);
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.06);
+}
+
+.gold {
+  color: #e6b88a;
+  background: rgba(255, 160, 80, 0.08);
+  box-shadow: 0 0 16px rgba(255, 160, 80, 0.06);
+}
+
+// Альтернатива — монохромная версия (если хочешь совсем минималистично)
+.muted {
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+}

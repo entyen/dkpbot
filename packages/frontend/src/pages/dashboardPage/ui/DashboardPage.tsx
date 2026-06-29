@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { User, HistoryItem, Server } from "@/shared/types";
 import { calculateServerStats, fetchServerHistoryData } from "@/features"
 import { useDocumentTitle } from "@/shared/hooks";
+import { PointsBadge } from "@/shared/ui";
 
 interface SimpleStats {
   totalPoints: number;
@@ -190,7 +191,7 @@ export const DashboardPage = () => {
                   <li key={player.userId} className="top-item">
                     <span className="top-position">#{index + 1}</span>
                     <span className="top-user-name">{player.userName}</span>
-                    <span className="top-points">{player.points} DKP</span>
+                    <PointsBadge value={player.points} variant="dkp" />
                   </li>
                 ))}
               </ol>
