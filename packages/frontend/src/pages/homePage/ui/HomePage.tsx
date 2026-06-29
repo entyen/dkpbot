@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { User, ServerUser } from "@/shared/types";
 import { fetchServerUserData } from "@/features";
 import { useDocumentTitle } from "@/shared/hooks";
+import { PointsBadge } from "@/shared/ui";
 
 export const HomePage = () => {
   useDocumentTitle("User Home Page")
@@ -101,7 +102,7 @@ export const HomePage = () => {
             <>
               <strong>Discord Name:</strong> {currentUserData.userName}
               <br />
-              <strong>DKP:</strong> {currentUserData.dkpPoints}
+              <strong>Points:</strong> <PointsBadge value={currentUserData.dkpPoints} />
               <br />
               <strong>Роль:</strong> {currentUserData.serverRole}
             </>
