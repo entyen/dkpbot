@@ -38,7 +38,13 @@ const serverUserSchema = new Schema({
   serverId: { type: String, require: true },
   userId: { type: String, require: true },
   userName: { type: String, default: null },
+  //for Moderator Admin and other inside database
   serverRole: { type: String, default: null },
+  //Discord Roles
+  serverRoles: [{
+    roleName: { type: String },
+    roleId: { type: String }
+  }],
   dkpPoints: { type: Number, default: 0 },
   activityPoints: { type: Number, default: 0 },
 });

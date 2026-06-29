@@ -365,6 +365,34 @@ bot.on("ready", (_) => {
           .setRequired(true)
       )
       .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    new SlashCommandBuilder()
+      .setName("set-server-log-channel")
+      .setDescription("Set Server log channel for bot")
+      .setDescriptionLocalizations({
+        ru: "Установить канал для вывода логов бота",
+      })
+      .addChannelOption((option) =>
+        option
+          .setName("selected_channel")
+          .setDescription("Select Channel")
+          .setDescriptionLocalizations({ ru: "Выбор Канала" })
+          .setRequired(true)
+      )
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    new SlashCommandBuilder()
+      .setName("set-server-verification-role")
+      .setDescription("Set server verification role for bot")
+      .setDescriptionLocalizations({
+        ru: "Установить роль которая верефицирует пользователя в боте",
+      })
+      .addRoleOption((option) =>
+        option
+          .setName("selected_role")
+          .setDescription("Select Role")
+          .setDescriptionLocalizations({ ru: "Выбор Роли" })
+          .setRequired(true)
+      )
+      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   ]
 
   bot.on("interactionCreate", async (interaction) => {
@@ -622,12 +650,42 @@ bot.on("guildMemberRemove", async (member) => {
   }
 })
 
-const TARGET_CHANNEL_ID = '1294943882857025536';
-const TARGET_ROLE_ID = '1295320531918393365';
+async function syncUserRoles(oldMember, newMember, server) {
+  // Пропускаем ботов
+  if (newMember.user.bot) return
+  
+  // Получаем текущие роли (исключая @everyone)
+  const currentRoles = newMember.roles.cache
+    .filter(role => role.id !== newMember.guild.id) // исключаем @everyone
+    .map(role => ({
+      roleName: role.name,
+      roleId: role.id
+    }))
+  
+  // Обновляем в базе
+  await serverUserdb.findOneAndUpdate(
+    { 
+      serverId: newMember.guild.id, 
+      userId: newMember.user.id 
+    },
+    { 
+      $set: { 
+        serverRoles: currentRoles,
+      }
+    },
+    { upsert: true, new: true }
+  )
+}
 
 bot.on("guildMemberUpdate", async (oldMember, newMember) => {
-  if (newMember.guild.id == TARGET_CHANNEL_ID && newMember.roles.cache.has(TARGET_ROLE_ID)) {
-    try {
+  if (newMember.user.bot) return
+  if (!newMember?.guild?.id) return
+
+  try {
+    const server = await serverdb.findOne({ serverId: newMember.guild.id })
+
+    if (!server?.verificationRoleId) return
+    if (newMember.guild.id == server.id && newMember.roles.cache.has(server.verificationRoleId)) {
       const findNickName = newMember?.nickname ?? newMember?.user?.globalName ?? null
 
       await serverUserdb.findOneAndUpdate(
@@ -635,51 +693,12 @@ bot.on("guildMemberUpdate", async (oldMember, newMember) => {
         { $set: { userName: findNickName } },
         { upsert: true, new: true }
       )
-    } catch (error) {
-      console.error(`Ошибка:`, error);
     }
-  }
 
-  let role = await roledb.find({})
-  role.forEach(async (r) => {
-    const roleId = r.roleId
-    if (
-      newMember._roles.find((x) => x === roleId) &&
-      !oldMember._roles.find((x) => x === roleId)
-    ) {
-      const tk = await newMember.guild.roles.fetch(roleId)
-      if (!newMember.user.username.match(/^[a-zA-Z0-9а-яА-Я]+$/)) {
-        await newMember.guild.members.cache
-          .get(newMember.user.id)
-          .setNickname("Dirt")
-      }
-      const icon = tk.name.replace(/[A-z0-9 _.-]/g, "")
-      if (newMember.nickname) {
-        newMember.guild.members.cache
-          .get(newMember.user.id)
-          .setNickname(
-            newMember.nickname.replace(/[^A-z0-9]/g, "") + " " + icon
-          )
-      } else {
-        newMember.guild.members.cache
-          .get(newMember.user.id)
-          .setNickname(newMember.user.username + " " + icon)
-      }
-    } else if (
-      oldMember._roles.find((x) => x === roleId) &&
-      !newMember._roles.find((x) => x === roleId)
-    ) {
-      if (newMember.nickname) {
-        newMember.guild.members.cache
-          .get(newMember.user.id)
-          .setNickname(newMember.nickname.replace(/[^A-z0-9]/g, ""))
-      } else {
-        newMember.guild.members.cache
-          .get(newMember.user.id)
-          .setNickname(newMember.user.username)
-      }
-    }
-  })
+    await syncUserRoles(oldMember, newMember, server)
+  } catch (error) {
+    console.error('Ошибка в guildMemberUpdate:', error)
+  }
 })
 
 bot.on("messageCreate", async (message) => {
@@ -891,6 +910,54 @@ bot.on("interactionCreate", async (inter) => {
     const userDB = await userdb.findOne({ userid: iUser.id })
 
     switch (command) {
+      case "set-server-verification-role":
+        const role = inter.options.getRole("selected_role")
+        if (!role) {
+          return await inter.reply({
+            content: "❌ Роль не найдена",
+            ephemeral: true
+          })
+        }
+
+        try {
+          const serverInfo = await serverdb.findOne({ serverId: inter.guildId })
+          serverInfo.verificationRoleId = role.id // или как у вас называется поле
+          await serverInfo.save()
+
+          return await inter.reply({
+            content: `✅ Роль для верификации установлена: ${role}`,
+            ephemeral: true
+          })
+        } catch (e) {
+          return await inter.reply({
+            content: `❌ Ошибка: ${e.message}`,
+            ephemeral: true
+          })
+        }
+      case "set-server-log-channel":
+        const channel = inter.options.getChannel("selected_channel")
+        if (!channel) {
+          return await inter.reply({
+            content: "❌ Канал не найден",
+            ephemeral: true
+          })
+        }
+
+        try {
+          const serverInfo = await serverdb.findOne({ serverId: inter.guildId })
+          serverInfo.logChannelId = channel.id // или как у вас называется поле
+          await serverInfo.save()
+
+          return await inter.reply({
+            content: `✅ Канал для логов установлен: ${channel}`,
+            ephemeral: true
+          })
+        } catch (e) {
+          return await inter.reply({
+            content: `❌ Ошибка: ${e.message}`,
+            ephemeral: true
+          })
+        }
       case "set-server-currency-emoji":
         const emojiId = inter.options.getString("emoji_id")
         try {
