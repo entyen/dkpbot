@@ -16,9 +16,9 @@ const extractDateFromObjectId = (objectId: string): Date | null => {
 
 const formatDate = (dateSource?: string | Date): string => {
   if (!dateSource) return "—";
-  
+
   let date: Date | null = null;
-  
+
   if (typeof dateSource === "string" && /^[a-f\d]{24}$/i.test(dateSource)) {
     // Похоже на ObjectId
     date = extractDateFromObjectId(dateSource);
@@ -28,9 +28,9 @@ const formatDate = (dateSource?: string | Date): string => {
   } else if (dateSource instanceof Date) {
     date = dateSource;
   }
-  
+
   if (!date || isNaN(date.getTime())) return "—";
-  
+
   return date.toLocaleDateString("ru-RU", {
     year: "numeric",
     month: "long",
@@ -173,15 +173,21 @@ export const HomePage = () => {
               <h3 className="home__section-title">Статистика</h3>
               <ul className="home__info-list">
                 <li>
+                  <span className="home__info-label">Очков за все время:</span>
+                  <span className="home__info-value">
+                    WIP
+                  </span>
+                </li>
+                <li>
                   <span className="home__info-label">Последняя активность:</span>
                   <span className="home__info-value">
-                    {formatDate(currentUserData.updatedAt || currentUserData.createdAt)}
+                    WIP
                   </span>
                 </li>
                 <li>
                   <span className="home__info-label">Регистрация:</span>
                   <span className="home__info-value">
-                    {formatDate(currentUserData._id)}
+                    {formatDate(currentUserData.date)}
                   </span>
                 </li>
               </ul>

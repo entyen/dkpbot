@@ -142,7 +142,11 @@ app.post("/dis/userInfoFetch", async (req, res) => {
   })
 
   if (userStat) {
-    return res.json(userStat)
+    const timestamp = userStat._id.getTimestamp();
+    return res.json({
+      ...userStat.toObject ? userStat.toObject() : userStat,
+      date: timestamp
+    })
   }
   return res.status(404).send("Пользователь не найден")
 })
@@ -653,7 +657,7 @@ bot.on("guildMemberRemove", async (member) => {
 async function syncUserRoles(oldMember, newMember, server) {
   // Пропускаем ботов
   if (newMember.user.bot) return
-  
+
   // Получаем текущие роли (исключая @everyone)
   const currentRoles = newMember.roles.cache
     .filter(role => role.id !== newMember.guild.id) // исключаем @everyone
@@ -661,15 +665,15 @@ async function syncUserRoles(oldMember, newMember, server) {
       roleName: role.name,
       roleId: role.id
     }))
-  
+
   // Обновляем в базе
   await serverUserdb.findOneAndUpdate(
-    { 
-      serverId: newMember.guild.id, 
-      userId: newMember.user.id 
+    {
+      serverId: newMember.guild.id,
+      userId: newMember.user.id
     },
-    { 
-      $set: { 
+    {
+      $set: {
         serverRoles: currentRoles,
       }
     },

@@ -1,6 +1,4 @@
 export interface ServerUser {
-  createdAt: any;
-  updatedAt: any;
   _id: string;
   serverId: string;
   userId: string;
@@ -13,6 +11,7 @@ export interface ServerUser {
   }],
   dkpPoints: number;
   activityPoints: number;
+  date: string;
 }
 
 export interface HistoryItem {
