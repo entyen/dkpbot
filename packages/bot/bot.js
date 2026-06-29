@@ -527,9 +527,17 @@ bot.on("ready", (_) => {
           serverId: GUILD.id,
           serverName: GUILD.name,
           active: true,
+          ownerId: GUILD.ownerId || null
         })
         console.log(`Created ${newServer}`)
       }
+
+      // if (!server.ownerId) {
+      //   server.ownerId = GUILD.ownerId
+      //   await server.save()
+      //   console.log(`Добавлен владелец серверу ${server.serverName}`)
+      // }
+
       GUILD.members.cache.forEach(async (MEMBER) => {
         const { user } = MEMBER
         const serverUser = await serverUserdb.findOne({
@@ -566,11 +574,48 @@ bot.on("guildMemberRemove", async (member) => {
     const serverFromDb = await serverdb.findOne({ serverId })
     if (serverFromDb && serverFromDb?.logChannelId) {
       const logChannel = member.guild.channels.cache.get(serverFromDb.logChannelId);
-      if (logChannel) {
-        await logChannel.send(
-          `👋 **<@${member.id}>** (${member?.nickname ?? member?.user?.globalName ?? null}) покинул сервер.`
-        );
-      }
+      if (!logChannel) return;
+
+      const findName = member?.nickname ?? member?.user?.globalName ?? member?.user?.username ?? 'Неизвестный пользователь'
+      const roles = member.roles.cache
+        .filter(role => role.name !== '@everyone')
+        .map(role => `\`${role.name}\``)
+        .join(' ') || '`Нет ролей`';
+
+      const embed = {
+        color: 0xff0000,
+        author: {
+          name: `${findName} покинул сервер`,
+          icon_url: member.user.displayAvatarURL({ dynamic: true })
+        },
+        description: `<@${member.id}> (${member.id})`,
+        fields: [
+          {
+            name: '📋 Роли',
+            value: roles,
+            inline: false
+          },
+          {
+            name: '📅 Присоединился',
+            value: member.joinedAt ? `<t:${Math.floor(member.joinedAt.getTime() / 1000)}:D>` : 'Неизвестно',
+            inline: true
+          },
+          {
+            name: '👥 Участников',
+            value: `${member.guild.memberCount}`,
+            inline: true
+          }
+        ],
+        thumbnail: {
+          url: member.user.displayAvatarURL({ dynamic: true })
+        },
+        timestamp: new Date().toISOString(),
+        footer: {
+          text: `ID: ${member.id}`
+        }
+      };
+
+      await logChannel.send({ embeds: [embed] });
     }
   } catch (e) {
     console.error('Ошибка в guildMemberRemove:', e);
