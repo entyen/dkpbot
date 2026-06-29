@@ -1,9 +1,16 @@
 export interface ServerUser {
+  createdAt: any;
+  updatedAt: any;
   _id: string;
   serverId: string;
   userId: string;
   userName: string;
   serverRole: string;
+  serverRoles: [{
+    _id: string,
+    roleId: string,
+    roleName: string
+  }],
   dkpPoints: number;
   activityPoints: number;
 }

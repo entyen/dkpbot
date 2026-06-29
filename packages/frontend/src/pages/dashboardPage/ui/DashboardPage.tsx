@@ -155,8 +155,6 @@ export const DashboardPage = () => {
           {server?.selectedServer && (
             <>
               <strong>Server Name:</strong> {server?.selectedServer?.serverName}
-              <br />
-              <strong>Server ID:</strong> {server?.selectedServer?.serverId}
             </>
           )}
         </p>
