@@ -594,11 +594,36 @@ bot.on("ready", (_) => {
   }
 })
 
-//activitySystem DISABLE
+const { getRainState, formatWeatherDurationNoSeconds, getDayNightState } = require('./module/throneandliberty/weather.js');
+
+//WEATHER SYSTEM
+job.addCallback(async () => {
+  const rain = getRainState(); // по умолчанию Date.now()
+  const phase = getDayNightState();
+
+  try {
+    const fetchTLInfo = async (voiceChannelId) => {
+      const channel = bot.channels.resolve(voiceChannelId)
+      await channel.setName(
+        `${phase.isDay ? "☀️" : "🌙"} ${rain.isRaining ? "🌧️ Дождь " + formatWeatherDurationNoSeconds(rain.remainingMs) : "🌤️️️ Дождь через " + formatWeatherDurationNoSeconds(rain.nextRainAtMs - Date.now())}` || "error"
+      )
+    }
+
+    await fetchTLInfo(
+      "1521309293695995934"
+    )
+  } catch (e) {
+    console.error(e)
+  }
+})
+//WEATHER SYSTEM
+
+//ACTIVITY SYSTEM
 const {
   acvititySystem,
 } = require("./module/server-currency-system/acvititySystem")
 acvititySystem(bot)
+//ACTIVITY SYSTEM
 
 bot.on("guildMemberRemove", async (member) => {
   try {
