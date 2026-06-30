@@ -190,6 +190,18 @@ export function formatWeatherDurationNoSeconds(ms) {
     : `${pad(minutes)} мин`;
 }
 
+export function formatRoundedDuration(ms) {
+  const totalMinutes = Math.max(0, Math.floor(ms / 60_000));
+  const rounded = Math.round(totalMinutes / 5) * 5; // округляем до 5 мин
+  const hours = Math.floor(rounded / 60);
+  const minutes = rounded % 60;
+
+  if (hours > 0) {
+    return `${hours} ч ${minutes} мин`;
+  }
+  return `${minutes} мин`;
+}
+
 export function formatWeatherClock(ms, timeZone) {
   return new Intl.DateTimeFormat("ru-RU", {
     hour: "2-digit",

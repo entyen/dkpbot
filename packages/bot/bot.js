@@ -30,10 +30,14 @@ const session = require("express-session")
 const config = require("./config.json")
 const app = express()
 const axios = require("axios")
+const crypto = require('crypto')
 const cors = require("cors")
 
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
+
+// === ОБЩЕЕ ХРАНИЛИЩЕ ТОКЕНОВ ===
+const loginTokens = new Map(); // key: token, value: { userId, username, avatar, expiresAt }
 
 // express link web3 and discord bot account
 const PORT = process.env.PORT || 2000
@@ -43,6 +47,7 @@ app.use(
     secret: config.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    // cookie: { secure: true }
   })
 )
 
@@ -96,12 +101,45 @@ app.get("/dis/callback", async (req, res) => {
     })
 
     req.session.user = userResponse.data // Сохраняем данные пользователя в сессии
-    res.redirect("https://dkp.grk.pw/dashboard") // Перенаправление на клиент
+    res.redirect("https://dkp.grk.pw") // Перенаправление на клиент
   } catch (error) {
     console.error("Ошибка при авторизации через Discord:", error)
     res.redirect("https://dkp.grk.pw")
   }
 })
+
+app.get("/dis/bot-login", async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    return res.status(400).send("Токен не указан");
+  }
+
+  const data = loginTokens.get(token);
+
+  if (!data) {
+    return res.status(401).send("Ссылка недействительна или уже использована");
+  }
+
+  if (Date.now() > data.expiresAt) {
+    loginTokens.delete(token);
+    return res.status(401).send("Ссылка устарела");
+  }
+
+  // Удаляем токен (одноразовый)
+  loginTokens.delete(token);
+
+  // Сохраняем в сессию и редиректим
+  req.session.user = {
+    id: data.userId,
+    username: data.username,
+    avatar: data.avatar,
+    // Можно добавить флаг, что авторизация через бота
+    authMethod: 'bot'
+  };
+
+  res.redirect("https://dkp.grk.pw");
+});
 
 app.get("/dis/user", (req, res) => {
   console.log(req.session)
@@ -317,6 +355,10 @@ bot.on("ready", (_) => {
   // slash commands register
   const commands = [
     new ContextMenuCommandBuilder()
+      .setName("Login")
+      .setNameLocalizations({ ru: "Авторизация" })
+      .setType(ApplicationCommandType.User),
+    new ContextMenuCommandBuilder()
       .setName("User Information")
       .setNameLocalizations({ ru: "Информация о пользователе" })
       .setType(ApplicationCommandType.User)
@@ -411,7 +453,31 @@ bot.on("ready", (_) => {
     }
 
     const currency = bot.emojis.cache.get(lang[4])
-    if (interaction.commandName === "User Information") {
+    if (interaction.commandName === 'Login') {
+      const token = crypto.randomBytes(32).toString('hex');
+
+      loginTokens.set(token, {
+        userId: interaction.user.id,
+        username: interaction.user.username,
+        avatar: interaction.user.displayAvatarURL(),
+        expiresAt: Date.now() + 5 * 60 * 1000, // 5 минут
+      });
+
+      const loginUrl = `https://api.grk.pw/dis/bot-login?token=${token}`;
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel('Войти на сайт')
+          .setStyle(ButtonStyle.Link)
+          .setURL(loginUrl)
+      );
+
+      await interaction.reply({
+        content: 'Нажми кнопку для авторизации (действует 5 минут):',
+        components: [row],
+        ephemeral: true,
+      });
+    } else if (interaction.commandName === "User Information") {
       const embed = new EmbedBuilder()
         .setColor("#0099ff")
         .setTitle("User Information")
@@ -594,7 +660,7 @@ bot.on("ready", (_) => {
   }
 })
 
-const { getRainState, formatWeatherDurationNoSeconds, getDayNightState } = require('./module/throneandliberty/weather.js');
+const { getRainState, formatRoundedDuration, getDayNightState } = require('./module/throneandliberty/weather.js');
 
 //WEATHER SYSTEM
 job.addCallback(async () => {
@@ -602,15 +668,22 @@ job.addCallback(async () => {
   const phase = getDayNightState();
 
   try {
-    const fetchTLInfo = async (voiceChannelId) => {
-      const channel = bot.channels.resolve(voiceChannelId)
-      await channel.setName(
-        `${phase.isDay ? "☀️" : "🌙"} ${rain.isRaining ? "🌧️ Дождь " + formatWeatherDurationNoSeconds(rain.remainingMs) : "🌤️️️ Дождь через " + formatWeatherDurationNoSeconds(rain.nextRainAtMs - Date.now())}` || "error"
-      )
+    const fetchTLInfo = async (phaseChannelId, weatherChannelId) => {
+      const phaseChannel = bot.channels.resolve(phaseChannelId)
+      const dayNightText = phase.isDay
+        ? `☀️ День ${formatRoundedDuration(phase.remainingMs)}`
+        : `🌙 Ночь ${formatRoundedDuration(phase.remainingMs)}`;
+      await phaseChannel.setName(dayNightText)
+      const weatherChannel = bot.channels.resolve(weatherChannelId)
+      const weatherText = rain.isRaining
+        ? `🌧️ Дождь ${formatRoundedDuration(rain.remainingMs)}`
+        : `🌤️ Дождь через ${formatRoundedDuration(rain.nextRainAtMs - Date.now())}`
+      await weatherChannel.setName(weatherText)
     }
 
     await fetchTLInfo(
-      "1521309293695995934"
+      "1521309293695995934",
+      "1521319798825287741"
     )
   } catch (e) {
     console.error(e)
