@@ -454,6 +454,8 @@ bot.on("ready", (_) => {
 
     const currency = bot.emojis.cache.get(lang[4])
     if (interaction.commandName === 'Login') {
+      await interaction.deferReply({ ephemeral: true });
+
       const token = crypto.randomBytes(32).toString('hex');
 
       loginTokens.set(token, {
@@ -472,10 +474,9 @@ bot.on("ready", (_) => {
           .setURL(loginUrl)
       );
 
-      await interaction.reply({
+      await interaction.editReply({
         content: 'Нажми кнопку для авторизации (действует 5 минут):',
         components: [row],
-        ephemeral: true,
       });
     } else if (interaction.commandName === "User Information") {
       const embed = new EmbedBuilder()
