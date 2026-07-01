@@ -1,18 +1,3 @@
-const Redis = require("ioredis");
-
-const redis = global.redisClient || new Redis({
-  host: "127.0.0.1",
-  port: 6379,
-  maxRetriesPerRequest: null,
-});
-
-if (!global.redisClient) global.redisClient = redis;
-
-redis.on("connect", () => console.log("Redis connected"));
-redis.on("ready", () => console.log("Redis ready"));
-redis.on("error", (err) => console.error("Redis error:", err));
-redis.on("close", () => console.log("Redis closed"));
-
 const { serverUserdb } = require("../../schema/data");
 
 const pointsPerMinute = 1;
@@ -31,7 +16,7 @@ async function updateUserPoints(guildId, userId, points) {
   await user.save();
 }
 
-const acvititySystem = (bot) => {
+const acvititySystem = (bot, redis) => {
   bot.on("voiceStateUpdate", async (oldState, newState) => {
     const userId = newState.id;
     const guildId = newState.guild.id;

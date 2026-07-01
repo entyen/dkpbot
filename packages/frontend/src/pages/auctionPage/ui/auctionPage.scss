@@ -1,0 +1,344 @@
+.auction-page {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  &__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  &__create-btn {
+    padding: 0.6rem 1.2rem;
+    background: var(--blue-primary);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-md);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover {
+      background: var(--blue-hover);
+      transform: translateY(-1px);
+    }
+  }
+
+  &__loading,
+  &__empty {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+}
+
+// ─── Форма создания ───
+.auction-form-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.auction-form {
+  background: var(--secondary-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-lg);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+
+  h2 {
+    margin-bottom: 1.25rem;
+    font-size: 1.25rem;
+    color: var(--text-primary);
+  }
+
+  &__group {
+    margin-bottom: 1rem;
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 0.35rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      background: var(--tertiary-bg);
+      border: 1px solid var(--border-input);
+      border-radius: var(--border-radius-sm);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      transition: border-color 0.15s;
+
+      &:focus {
+        outline: none;
+        border-color: var(--blue-primary);
+        box-shadow: var(--shadow-glow-blue);
+      }
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 0.75rem;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+
+    button {
+      flex: 1;
+      padding: 0.65rem;
+      border-radius: var(--border-radius-sm);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: none;
+
+      &.btn-primary {
+        background: var(--blue-primary);
+        color: white;
+
+        &:hover:not(:disabled) {
+          background: var(--blue-hover);
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: wait;
+        }
+      }
+
+      &.btn-secondary {
+        background: var(--tertiary-bg);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-input);
+
+        &:hover {
+          background: var(--secondary-bg);
+          color: var(--text-primary);
+        }
+      }
+    }
+  }
+}
+
+// ─── Карточка ───
+.auction-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 2px solid;
+  border-radius: var(--border-radius-lg);
+  padding: 1rem;
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover:not(&--ended) {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  &--ended {
+    opacity: 0.55;
+  }
+
+  &__quality-bar {
+    position: absolute;
+    top: 0;
+    left: 1rem;
+    right: 1rem;
+    height: 3px;
+    border-radius: 0 0 4px 4px;
+  }
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    margin-top: 0.25rem;
+  }
+
+  &__name {
+    font-size: 1rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__role {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    background: var(--tertiary-bg);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  &__stats {
+    display: flex;
+    gap: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+
+    span {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    strong {
+      font-size: 1rem;
+      color: var(--text-primary);
+    }
+  }
+
+  &__timer {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent-gold);
+    margin-bottom: 0.75rem;
+    padding: 0.35rem 0.6rem;
+    background: var(--tertiary-bg);
+    border-radius: var(--border-radius-sm);
+    width: fit-content;
+
+    &[data-ending="true"] {
+      color: #ff4444;
+      animation: pulse 1s infinite;
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  &__bid-btn,
+  &__buyout-btn {
+    flex: 1;
+    padding: 0.55rem;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  &__bid-btn {
+    background: var(--blue-primary);
+    color: white;
+
+    &:hover {
+      background: var(--blue-hover);
+    }
+  }
+
+  &__buyout-btn {
+    background: var(--accent-gold);
+    color: var(--bg-primary);
+
+    &:hover {
+      filter: brightness(1.1);
+    }
+  }
+
+  &__ended {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 0.5rem;
+    background: var(--tertiary-bg);
+    border-radius: var(--border-radius-sm);
+    text-align: center;
+  }
+
+  &__cancel {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(255, 68, 68, 0.15);
+    color: #ff4444;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+
+    &:hover {
+      background: rgba(255, 68, 68, 0.3);
+    }
+  }
+
+  &:hover &__cancel {
+    opacity: 1;
+  }
+}
+
+.auction-form__loading-field {
+  padding: 0.6rem 0.75rem;
+  background: var(--tertiary-bg);
+  border: 1px solid var(--border-input);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}

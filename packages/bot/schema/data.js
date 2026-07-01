@@ -62,7 +62,7 @@ const auctionItemSchema = new Schema({
   buyoutPrice: { type: Number, default: null },
 
   startTime: { type: Date, required: true },
-  endTIme: { type: Date, require: true },
+  endTime: { type: Date, require: true },
 
   status: {
     type: String,

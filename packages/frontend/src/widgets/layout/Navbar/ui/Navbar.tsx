@@ -84,17 +84,18 @@ export const Navbar = () => {
   };
 
   const NavBarMenu = () => {
-    const isOwner =
-      user &&
-      selectedServer?.serverId &&
-      String(selectedServer.ownerId) === String(user.id);
+    // const isOwner =
+    //   user &&
+    //   selectedServer?.serverId &&
+    //   String(selectedServer.ownerId) === String(user.id);
 
     return (
       <div className="menu">
         <a href="/">Home</a>
         <a href="/dashboard">Dashboard</a>
         <a href="/history">History</a>
-        {isOwner && <a href="/auction">Auction</a>}
+        <a href="/auction">Auction</a>
+        {/* {isOwner && <a href="/auction">Auction</a>} */}
       </div>
     );
   };

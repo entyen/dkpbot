@@ -27,11 +27,27 @@ const mongoose = require("mongoose")
 const steam = require("steam-web")
 const express = require("express")
 const session = require("express-session")
+const RedisStore = require('connect-redis')(session);
+const Redis = require("ioredis");
 const config = require("./config.json")
+
 const app = express()
 const axios = require("axios")
 const crypto = require('crypto')
 const cors = require("cors")
+
+const redis = global.redisClient || new Redis({
+  host: "127.0.0.1",
+  port: 6379,
+  maxRetriesPerRequest: null,
+});
+
+if (!global.redisClient) global.redisClient = redis;
+
+redis.on("connect", () => console.log("Redis connected"));
+redis.on("ready", () => console.log("Redis ready"));
+redis.on("error", (err) => console.error("Redis error:", err));
+redis.on("close", () => console.log("Redis closed"));
 
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
@@ -42,14 +58,30 @@ const loginTokens = new Map(); // key: token, value: { userId, username, avatar,
 // express link web3 and discord bot account
 const PORT = process.env.PORT || 2000
 
+const redisStore = new RedisStore({
+  client: redis, // Ваш Redis клиент
+  prefix: 'sess:', // Префикс для ключей
+  ttl: 86400, // 24 часа в секундах
+  disableTTL: false,
+  disableTouch: false,
+})
+
 app.use(
   session({
+    store: redisStore,
     secret: config.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    // cookie: { secure: true }
+    cookie: {
+      maxAge: 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    },
+    name: 'sid',
+    rolling: true,
   })
-)
+);
 
 app.use(
   cors({
@@ -147,6 +179,131 @@ app.get("/dis/user", (req, res) => {
     return res.status(401).send("Не авторизован")
   }
   res.json(req.session.user)
+})
+
+app.post("/dis/auction/create", async (req, res) => {
+  // Проверка авторизации
+  if (!req.session.user) {
+    return res.status(401).json({
+      success: false,
+      error: "Не авторизован"
+    });
+  }
+
+  try {
+    const userInfo = await serverUserdb.findOne({
+      serverId: req.body.serverId,
+      userId: req.session.user.id,
+    });
+
+    // Проверка прав администратора
+    if (!userInfo || userInfo.serverRole !== "admin") {
+      return res.status(403).json({
+        success: false,
+        error: "Недостаточно прав. Требуются права администратора"
+      });
+    }
+
+    // Валидация обязательных полей
+    const requiredFields = ['serverId', 'itemName', 'startPrice'];
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Отсутствуют обязательные поля: ${missingFields.join(', ')}`
+      });
+    }
+
+    const data = req.body;
+
+
+    // Создание аукциона
+    const auction = await auctiondb.create({
+      serverId: data.serverId,
+      createdBy: data.createdBy || req.session.user.id,
+      itemName: data.itemName,
+      description: data.description || '',
+      startPrice: Number(data.startPrice),
+      minBidStep: Number(data.minBidStep) || 1,
+      buyoutPrice: data.buyoutPrice ? Number(data.buyoutPrice) : null,
+      startTime: data.startTime || new Date(),
+      endTime: data.endTime,
+      createdAt: new Date(),
+      whatRolesCanBid: [data.whatRoleCanBid],
+      status: 'active'
+    });
+
+    // Успешный ответ
+    return res.status(201).json({
+      success: true,
+      message: "Аукцион успешно создан",
+      data: auction
+    });
+
+  } catch (error) {
+    console.error('Error creating auction:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Внутренняя ошибка сервера",
+      message: error.message
+    });
+  }
+});
+
+app.post("/dis/auction/list", async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).send("Не авторизован")
+  }
+
+  try {
+    const { serverId, status } = req.body;
+    const auctions = await auctiondb.find({
+      serverId: serverId,
+      status: status,
+      endTime: { $gt: new Date() }
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (auctions.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "Активных аукционов не найдено",
+        data: []
+      });
+    }
+
+    // Форматирование данных
+    const formattedAuctions = auctions.map(auction => ({
+      id: auction._id,
+      itemName: auction.itemName,
+      description: auction.description,
+      startPrice: auction.startPrice,
+      currentBid: auction.currentPrice || auction.startPrice,
+      minBidStep: auction.minBidStep,
+      buyoutPrice: auction.buyoutPrice,
+      endTime: auction.endTime,
+      timeLeft: Math.max(0, Math.floor((new Date(auction.endTime) - new Date()) / 1000)),
+      createdBy: auction.createdBy,
+      bidsCount: auction.bids?.length || 0,
+      status: auction.status,
+      createdAt: auction.createdAt,
+      whatRoleCanBid: auction.whatRolesCanBid[0]
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: formattedAuctions,
+      count: formattedAuctions.length
+    });
+  } catch (error) {
+    console.error('Error fetching auctions:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Внутренняя ошибка сервера"
+    });
+  }
 })
 
 app.get("/dis/userServers", async (req, res) => {
@@ -293,6 +450,62 @@ const st = new steam({
   format: "json", //optional ['json', 'xml', 'vdf']
 })
 
+//GET ROLES
+app.post("/dis/channelRoles", async (req, res) => {
+  try {
+    const { guildId } = req.query;
+
+    if (!guildId) {
+      return res.status(400).json({
+        error: "Параметр guildId обязателен"
+      });
+    }
+
+    const guild = await bot.guilds.fetch(guildId);
+
+    // Получаем роли сервера
+    const roles = await guild.roles.fetch();
+
+    // Форматируем ответ
+    const rolesList = roles.map(role => ({
+      id: role.id,
+      name: role.name,
+      color: role.hexColor,
+      position: role.position,
+      permissions: role.permissions.bitfield.toString(),
+      isMentionable: role.mentionable,
+      isHoisted: role.hoist,        // Отображается ли отдельно в списке
+      isManaged: role.managed,      // Управляется ли интеграцией (ботом)
+      createdAt: role.createdAt
+    }));
+
+    // Сортируем по позиции (от высшей к низшей)
+    rolesList.sort((a, b) => b.position - a.position);
+
+    res.json({
+      guildId: guild.id,
+      guildName: guild.name,
+      totalRoles: rolesList.length,
+      roles: rolesList
+    });
+  } catch (error) {
+    console.error("Ошибка при получении ролей:", error);
+
+    if (error.code === 10004) {
+      return res.status(404).json({
+        error: "Сервер не найден или бот не имеет к нему доступа"
+      });
+    }
+
+    res.status(500).json({
+      error: "Внутренняя ошибка сервера",
+      message: error.message
+    });
+  }
+
+})
+//GET ROLES
+
 //PLAYER DISCORD
 const { Player } = require("discord-player")
 const player = new Player(bot, {
@@ -312,6 +525,7 @@ const {
   serverdb,
   serverUserdb,
   pointsdb,
+  auctiondb,
 } = require("./schema/data.js")
 
 const rand = (min, max) => {
@@ -687,7 +901,7 @@ job.addCallback(async () => {
 const {
   acvititySystem,
 } = require("./module/server-currency-system/acvititySystem")
-acvititySystem(bot)
+acvititySystem(bot, redis)
 //ACTIVITY SYSTEM
 
 bot.on("guildMemberRemove", async (member) => {
@@ -748,6 +962,8 @@ async function syncUserRoles(oldMember, newMember, server) {
   // Пропускаем ботов
   if (newMember.user.bot) return
 
+  const isAdmin = newMember.permissions.has(0x8n);
+
   // Получаем текущие роли (исключая @everyone)
   const currentRoles = newMember.roles.cache
     .filter(role => role.id !== newMember.guild.id) // исключаем @everyone
@@ -764,6 +980,7 @@ async function syncUserRoles(oldMember, newMember, server) {
     },
     {
       $set: {
+        serverRole: isAdmin ? "admin" : null,
         serverRoles: currentRoles,
       }
     },
@@ -1236,13 +1453,11 @@ stdin.addListener("data", async (d) => {
             serverId: guild.id,
             userId: id,
             userName: member.nickname || member.user.globalName || null,
-            serverRoles: roles,
-            serverRole: roles.length > 0 ? roles[0].roleName : null
+            serverRole: null
           });
           created++;
         } else {
-          user.serverRoles = roles;
-          user.serverRole = roles.length > 0 ? roles[0].roleName : null;
+          user.serverRole = null;
           updated++;
         }
 

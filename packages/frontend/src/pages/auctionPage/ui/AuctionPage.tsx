@@ -1,16 +1,458 @@
 import "./auctionPage.scss";
+import { useState, useEffect } from "react";
+import { apiClient } from "@/shared/api";
+import { useUserStore } from "@/store";
+import { fetchChannelRoles, fetchServerUserData } from "@/features";
+import { DiscordRole, ServerUser } from "@/shared/types";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useDocumentTitle } from "@/shared/hooks";
+
+interface AuctionItem {
+  _id: string;
+  itemName: string;
+  itemIcon: string | null;
+  itemQuality: string;
+  startPrice: number;
+  currentBid: number;
+  buyoutPrice: number | null;
+  endTime: string;
+  status: 'active' | 'ended' | 'cancelled';
+  bidsCount: number;
+  whatRoleCanBid: {
+    roleName: string,
+    roleId: string
+  } | null;
+  winner?: {
+    userId: string;
+    userName: string;
+    winningBid: number;
+  };
+}
 
 export const AuctionPage = () => {
+  useDocumentTitle("Auction Page");
   const navigate = useNavigate();
+  const [serverUserData, setServerUserData] = useState<ServerUser | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const serverId = useUserStore((state) => state.servers?.selectedServer.serverId);
+  const serverName = useUserStore((state) => state.servers?.selectedServer.serverName);
+
+  const [auctions, setAuctions] = useState<AuctionItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    navigate("/auction");
-  }, [navigate]);
+    setIsLoading(true);
+    fetchServerUserData({
+      serverId,
+      navigate,
+      setServerUserData,
+      setError,
+      setIsLoading,
+    });
+  }, [serverId]);
+
+  useEffect(() => {
+    if (serverUserData?.serverRole === 'admin') {
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [serverUserData]);
+
+  useEffect(() => {
+    if (!serverId) return;
+
+    const fetchAuctions = async () => {
+      setIsLoading(true);
+      try {
+        const { data } = await apiClient.post('/auction/list', {
+          serverId: serverId,
+          status: 'active',
+        });
+        setAuctions(data.data);
+      } catch (err) {
+        console.error("Ошибка загрузки аукционов:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAuctions();
+    const interval = setInterval(fetchAuctions, 10000);
+    return () => clearInterval(interval);
+  }, [serverId]);
+
+  if (!serverId) {
+    return (
+      <section className="auction-page">
+        <div className="auction-page__empty">Выберите сервер для просмотра аукциона</div>
+      </section>
+    );
+  }
+
   return (
-    <section className="landing-page">
-      Autction Page
+    <section className="auction-page">
+      {error && <div className="auction__error">{error}</div>}
+      <div className="auction-page__header">
+        <h1 className="auction-page__title">Аукцион — {serverName}</h1>
+        {isAdmin && (
+          <CreateAuctionButton serverId={serverId} onCreated={(a) => setAuctions(prev => [a, ...prev])} />
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="auction-page__loading">Загрузка...</div>
+      ) : auctions.length === 0 ? (
+        <div className="auction-page__empty">Нет активных лотов</div>
+      ) : (
+        <div className="auction-page__grid">
+          {auctions.map((auction) => (
+            <AuctionCard key={auction._id} auction={auction} isOwner={isAdmin} />
+          ))}
+        </div>
+      )}
     </section>
+  );
+};
+
+// ─── Кнопка + форма создания аукциона ───
+const CreateAuctionButton = ({ serverId, onCreated }: { serverId: string; onCreated: (a: AuctionItem) => void }) => {
+  const [showForm, setShowForm] = useState(false);
+
+  return (
+    <>
+      <button className="auction-page__create-btn" onClick={() => setShowForm(true)}>
+        + Создать лот
+      </button>
+      {showForm && (
+        <CreateAuctionForm
+          serverId={serverId}
+          onClose={() => setShowForm(false)}
+          onCreated={(a) => { onCreated(a); setShowForm(false); }}
+        />
+      )}
+    </>
+  );
+};
+
+const CreateAuctionForm = ({
+  serverId,
+  onClose,
+  onCreated,
+}: {
+  serverId: string;
+  onClose: () => void;
+  onCreated: (a: AuctionItem) => void;
+}) => {
+  const user = useUserStore((state) => state.user);
+  const [roles, setRoles] = useState<DiscordRole[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(true);
+
+  const [form, setForm] = useState({
+    itemName: '',
+    itemQuality: 'epic',
+    startPrice: 10,
+    minBidStep: 5,
+    buyoutPrice: '',
+    endTime: '',
+    whatRoleCanBid: {
+      roleName: '',
+      roleId: ''
+    },
+    description: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Загружаем роли сервера
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const data = await fetchChannelRoles(serverId);
+        setRoles(data);
+      } catch (err) {
+        console.error("Ошибка загрузки ролей:", err);
+      } finally {
+        setRolesLoading(false);
+      }
+    };
+    fetchRoles();
+  }, [serverId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
+    setIsSubmitting(true);
+
+    try {
+      const { data } = await apiClient.post('/auction/create', {
+        itemName: form.itemName,
+        itemQuality: form.itemQuality,
+        startPrice: Number(form.startPrice),
+        minBidStep: Number(form.minBidStep),
+        buyoutPrice: form.buyoutPrice ? Number(form.buyoutPrice) : null,
+        endTime: new Date(form.endTime).toISOString(),
+        whatRoleCanBid: form.whatRoleCanBid || null,
+        description: form.description,
+        serverId,
+        createdBy: user.id,
+        startTime: new Date().toISOString(),
+      });
+
+      onCreated(data);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Ошибка создания');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRoleChange = (roleId: string) => {
+    if (!roleId) {
+      setForm({
+        ...form,
+        whatRoleCanBid: { roleId: '', roleName: '' }
+      });
+      return;
+    }
+
+    const selectedRole = roles.find(role => role.id === roleId);
+    if (selectedRole) {
+      setForm({
+        ...form,
+        whatRoleCanBid: {
+          roleId: selectedRole.id,
+          roleName: selectedRole.name
+        }
+      });
+    }
+  };
+
+  return (
+    <div className="auction-form-overlay" onClick={onClose}>
+      <div className="auction-form" onClick={(e) => e.stopPropagation()}>
+        <h2>Создать аукцион</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="auction-form__group">
+            <label>Название предмета *</label>
+            <input
+              required
+              value={form.itemName}
+              onChange={(e) => setForm({ ...form, itemName: e.target.value })}
+              placeholder="Например: Меч Испепелителя"
+            />
+          </div>
+
+          <div className="auction-form__row">
+            <div className="auction-form__group">
+              <label>Качество</label>
+              <select
+                value={form.itemQuality}
+                onChange={(e) => setForm({ ...form, itemQuality: e.target.value })}
+              >
+                <option value="common">Обычное</option>
+                <option value="uncommon">Необычное</option>
+                <option value="rare">Редкое</option>
+                <option value="epic">Эпическое</option>
+                <option value="legendary">Легендарное</option>
+              </select>
+            </div>
+
+            <div className="auction-form__group">
+              <label>Роль (опционально)</label>
+              {rolesLoading ? (
+                <div className="auction-form__loading-field">Загрузка ролей...</div>
+              ) : (
+                <select
+                  value={form.whatRoleCanBid?.roleId || ''}
+                  onChange={(e) => handleRoleChange(e.target.value)}
+                >
+                  <option value="">Любая</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+
+          <div className="auction-form__row">
+            <div className="auction-form__group">
+              <label>Стартовая цена (DKP) *</label>
+              <input
+                type="number"
+                required
+                min={1}
+                value={form.startPrice}
+                onChange={(e) => setForm({ ...form, startPrice: Number(e.target.value) })}
+              />
+            </div>
+
+            <div className="auction-form__group">
+              <label>Шаг ставки *</label>
+              <input
+                type="number"
+                required
+                min={1}
+                value={form.minBidStep}
+                onChange={(e) => setForm({ ...form, minBidStep: Number(e.target.value) })}
+              />
+            </div>
+
+            <div className="auction-form__group">
+              <label>Выкуп (опционально)</label>
+              <input
+                type="number"
+                min={1}
+                value={form.buyoutPrice}
+                onChange={(e) => setForm({ ...form, buyoutPrice: e.target.value })}
+                placeholder="DKP"
+              />
+            </div>
+          </div>
+
+          <div className="auction-form__group">
+            <label>Окончание аукциона *</label>
+            <input
+              type="datetime-local"
+              required
+              value={form.endTime}
+              onChange={(e) => setForm({ ...form, endTime: e.target.value })}
+            />
+          </div>
+
+          <div className="auction-form__group">
+            <label>Описание</label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Описание предмета, условия и т.д."
+              rows={3}
+            />
+          </div>
+
+          <div className="auction-form__actions">
+            <button type="button" className="btn-secondary" onClick={onClose}>
+              Отмена
+            </button>
+            <button type="submit" className="btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Создание...' : 'Создать лот'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ─── Карточка лота ───
+const AuctionCard = ({ auction, isOwner }: { auction: AuctionItem; isOwner: boolean }) => {
+  const user = useUserStore((state) => state.user);
+  const timeLeft = new Date(auction.endTime).getTime() - Date.now();
+  const isEnded = timeLeft <= 0 || auction.status !== 'active';
+
+  const formatTime = (ms: number) => {
+    if (ms <= 0) return "Завершено";
+    const hours = Math.floor(ms / 3600000);
+    const mins = Math.floor((ms % 3600000) / 60000);
+    return `${hours}ч ${mins}м`;
+  };
+
+  const qualityColors: Record<string, string> = {
+    common: '#9e9e9e',
+    uncommon: '#1eff00',
+    rare: '#0070dd',
+    epic: '#a335ee',
+    legendary: '#ff8000',
+  };
+
+  const handleBid = async () => {
+    if (!user?.id) return alert("Авторизуйтесь");
+
+    try {
+      await apiClient.post(`/auction/${auction._id}/bid`, {
+        amount: auction.currentBid + 5,
+      });
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Ошибка ставки');
+    }
+  };
+
+  const handleBuyout = async () => {
+    if (!user?.id || !auction.buyoutPrice) return;
+
+    try {
+      await apiClient.post(`/auction/${auction._id}/buyout`);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Ошибка выкупа');
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!confirm('Отменить аукцион?')) return;
+
+    try {
+      await apiClient.post(`/auction/${auction._id}/cancel`);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Ошибка отмены');
+    }
+  };
+
+  return (
+    <div
+      className={`auction-card ${isEnded ? 'auction-card--ended' : ''}`}
+      style={{ borderColor: qualityColors[auction.itemQuality] || '#9e9e9e' }}
+    >
+      <div className="auction-card__quality-bar" style={{ background: qualityColors[auction.itemQuality] }} />
+
+      <div className="auction-card__header">
+        <h3 className="auction-card__name" style={{ color: qualityColors[auction.itemQuality] }}>
+          {auction.itemName}
+        </h3>
+        {auction.whatRoleCanBid?.roleName && (
+          <span className="auction-card__role">{auction.whatRoleCanBid.roleName}</span>
+        )}
+      </div>
+
+      <div className="auction-card__stats">
+        <div className="auction-card__stat">
+          <span>Текущая ставка</span>
+          <strong>{auction.currentBid} DKP</strong>
+        </div>
+        <div className="auction-card__stat">
+          <span>Ставок</span>
+          <strong>{auction.bidsCount}</strong>
+        </div>
+      </div>
+
+      <div className="auction-card__timer" data-ending={timeLeft < 300000}>
+        {formatTime(timeLeft)}
+      </div>
+
+      {!isEnded ? (
+        <div className="auction-card__actions">
+          <button className="auction-card__bid-btn" onClick={handleBid}>
+            Ставка
+          </button>
+          {auction.buyoutPrice && (
+            <button className="auction-card__buyout-btn" onClick={handleBuyout}>
+              Выкуп {auction.buyoutPrice} DKP
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="auction-card__ended">
+          {auction.winner ? `Победитель: ${auction.winner.userName}` : 'Нет ставок'}
+        </div>
+      )}
+
+      {isOwner && !isEnded && (
+        <button className="auction-card__cancel" onClick={handleCancel}>
+          ✕ Отменить
+        </button>
+      )}
+    </div>
   );
 };
