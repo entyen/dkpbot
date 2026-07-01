@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks";
 
 interface AuctionItem {
-  _id: string;
+  id: string;
   itemName: string;
   itemIcon: string | null;
   itemQuality: string;
@@ -27,6 +27,7 @@ interface AuctionItem {
     userName: string;
     winningBid: number;
   };
+  serverId: string;
 }
 
 export const AuctionPage = () => {
@@ -68,7 +69,6 @@ export const AuctionPage = () => {
       try {
         const { data } = await apiClient.post('/auction/list', {
           serverId: serverId,
-          status: 'active',
         });
         setAuctions(data.data);
       } catch (err) {
@@ -108,7 +108,7 @@ export const AuctionPage = () => {
       ) : (
         <div className="auction-page__grid">
           {auctions.map((auction) => (
-            <AuctionCard key={auction._id} auction={auction} isOwner={isAdmin} />
+            <AuctionCard key={auction.id} auction={auction} isOwner={isAdmin} />
           ))}
         </div>
       )}
@@ -350,8 +350,15 @@ const CreateAuctionForm = ({
 // ─── Карточка лота ───
 const AuctionCard = ({ auction, isOwner }: { auction: AuctionItem; isOwner: boolean }) => {
   const user = useUserStore((state) => state.user);
-  const timeLeft = new Date(auction.endTime).getTime() - Date.now();
-  const isEnded = timeLeft <= 0 || auction.status !== 'active';
+  const [localAuction, setLocalAuction] = useState<AuctionItem>(auction);
+  
+  // Обновляем localAuction при изменении пропса
+  useEffect(() => {
+    setLocalAuction(auction);
+  }, [auction]);
+
+  const timeLeft = new Date(localAuction.endTime).getTime() - Date.now();
+  const isEnded = timeLeft <= 0 || localAuction.status !== 'active';
 
   const formatTime = (ms: number) => {
     if (ms <= 0) return "Завершено";
@@ -371,20 +378,62 @@ const AuctionCard = ({ auction, isOwner }: { auction: AuctionItem; isOwner: bool
   const handleBid = async () => {
     if (!user?.id) return alert("Авторизуйтесь");
 
+    // Оптимистичное обновление
+    const newBidAmount = localAuction.currentBid + 5;
+    setLocalAuction(prev => ({
+      ...prev,
+      currentBid: newBidAmount,
+      bidsCount: prev.bidsCount + 1
+    }));
+
     try {
-      await apiClient.post(`/auction/${auction._id}/bid`, {
-        amount: auction.currentBid + 5,
+      const response = await apiClient.post(`/auction/${localAuction.id}/bid`, {
+        serverId: localAuction.serverId,
+        amount: newBidAmount,
       });
+
+      // Обновляем из ответа сервера
+      if (response.data.success) {
+        setLocalAuction(prev => ({
+          ...prev,
+          currentBid: response.data.data.currentPrice,
+          bidsCount: prev.bidsCount // возвращаем обратно, т.к. сервер может вернуть актуальное значение
+        }));
+        
+        // Дополнительно: можно обновить данные на уровне родителя
+        // если у вас есть функция обновления списка
+      }
     } catch (err: any) {
+      // Откат при ошибке
+      setLocalAuction(prev => ({
+        ...prev,
+        currentBid: prev.currentBid - 5,
+        bidsCount: prev.bidsCount - 1
+      }));
       alert(err?.response?.data?.error || 'Ошибка ставки');
     }
   };
 
   const handleBuyout = async () => {
-    if (!user?.id || !auction.buyoutPrice) return;
+    if (!user?.id || !localAuction.buyoutPrice) return;
 
     try {
-      await apiClient.post(`/auction/${auction._id}/buyout`);
+      const response = await apiClient.post(`/auction/${localAuction.id}/buyout`, { 
+        serverId: localAuction.serverId 
+      });
+      
+      if (response.data.success) {
+        // Обновляем статус и победителя при выкупе
+        setLocalAuction(prev => ({
+          ...prev,
+          status: 'ended',
+          winner: {
+            userId: user.id,
+            userName: user.username || 'Unknown',
+            winningBid: prev.buyoutPrice || prev.currentBid
+          }
+        }));
+      }
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Ошибка выкупа');
     }
@@ -394,7 +443,14 @@ const AuctionCard = ({ auction, isOwner }: { auction: AuctionItem; isOwner: bool
     if (!confirm('Отменить аукцион?')) return;
 
     try {
-      await apiClient.post(`/auction/${auction._id}/cancel`);
+      await apiClient.post(`/auction/${localAuction.id}/cancel`, { 
+        serverId: localAuction.serverId 
+      });
+      
+      setLocalAuction(prev => ({
+        ...prev,
+        status: 'cancelled'
+      }));
     } catch (err: any) {
       alert(err?.response?.data?.error || 'Ошибка отмены');
     }
@@ -403,27 +459,27 @@ const AuctionCard = ({ auction, isOwner }: { auction: AuctionItem; isOwner: bool
   return (
     <div
       className={`auction-card ${isEnded ? 'auction-card--ended' : ''}`}
-      style={{ borderColor: qualityColors[auction.itemQuality] || '#9e9e9e' }}
+      style={{ borderColor: qualityColors[localAuction.itemQuality] || '#9e9e9e' }}
     >
-      <div className="auction-card__quality-bar" style={{ background: qualityColors[auction.itemQuality] }} />
+      <div className="auction-card__quality-bar" style={{ background: qualityColors[localAuction.itemQuality] }} />
 
       <div className="auction-card__header">
-        <h3 className="auction-card__name" style={{ color: qualityColors[auction.itemQuality] }}>
-          {auction.itemName}
+        <h3 className="auction-card__name" style={{ color: qualityColors[localAuction.itemQuality] }}>
+          {localAuction.itemName}
         </h3>
-        {auction.whatRoleCanBid?.roleName && (
-          <span className="auction-card__role">{auction.whatRoleCanBid.roleName}</span>
+        {localAuction.whatRoleCanBid?.roleName && (
+          <span className="auction-card__role">{localAuction.whatRoleCanBid.roleName}</span>
         )}
       </div>
 
       <div className="auction-card__stats">
         <div className="auction-card__stat">
           <span>Текущая ставка</span>
-          <strong>{auction.currentBid} DKP</strong>
+          <strong>{localAuction.currentBid} DKP</strong>
         </div>
         <div className="auction-card__stat">
           <span>Ставок</span>
-          <strong>{auction.bidsCount}</strong>
+          <strong>{localAuction.bidsCount}</strong>
         </div>
       </div>
 
@@ -434,17 +490,17 @@ const AuctionCard = ({ auction, isOwner }: { auction: AuctionItem; isOwner: bool
       {!isEnded ? (
         <div className="auction-card__actions">
           <button className="auction-card__bid-btn" onClick={handleBid}>
-            Ставка
+            Ставка +5
           </button>
-          {auction.buyoutPrice && (
+          {localAuction.buyoutPrice && (
             <button className="auction-card__buyout-btn" onClick={handleBuyout}>
-              Выкуп {auction.buyoutPrice} DKP
+              Выкуп {localAuction.buyoutPrice} DKP
             </button>
           )}
         </div>
       ) : (
         <div className="auction-card__ended">
-          {auction.winner ? `Победитель: ${auction.winner.userName}` : 'Нет ставок'}
+          {localAuction.winner ? `Победитель: ${localAuction.winner.userName}` : 'Нет ставок'}
         </div>
       )}
 

@@ -260,8 +260,6 @@ app.post("/dis/auction/list", async (req, res) => {
     const { serverId, status } = req.body;
     const auctions = await auctiondb.find({
       serverId: serverId,
-      status: status,
-      endTime: { $gt: new Date() }
     })
       .sort({ createdAt: -1 })
       .lean();
@@ -274,13 +272,23 @@ app.post("/dis/auction/list", async (req, res) => {
       });
     }
 
+    // Utility function
+    const getCurrentPrice = (auction) => {
+      if (!auction.bids || auction.bids.length === 0) {
+        return auction.startPrice;
+      }
+      // Sort bids by amount descending to get highest
+      const sortedBids = [...auction.bids].sort((a, b) => b.amount - a.amount);
+      return sortedBids[0].amount;
+    };
+
     // Форматирование данных
     const formattedAuctions = auctions.map(auction => ({
       id: auction._id,
       itemName: auction.itemName,
       description: auction.description,
       startPrice: auction.startPrice,
-      currentBid: auction.currentPrice || auction.startPrice,
+      currentBid: getCurrentPrice(auction),
       minBidStep: auction.minBidStep,
       buyoutPrice: auction.buyoutPrice,
       endTime: auction.endTime,
@@ -289,7 +297,9 @@ app.post("/dis/auction/list", async (req, res) => {
       bidsCount: auction.bids?.length || 0,
       status: auction.status,
       createdAt: auction.createdAt,
-      whatRoleCanBid: auction.whatRolesCanBid[0]
+      whatRoleCanBid: auction.whatRolesCanBid[0],
+      serverId: auction.serverId,
+      winner: auction.winner
     }));
 
     return res.status(200).json({
@@ -299,6 +309,262 @@ app.post("/dis/auction/list", async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching auctions:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Внутренняя ошибка сервера"
+    });
+  }
+})
+
+app.post("/dis/auction/:id/cancel", async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).send("Не авторизован")
+  }
+
+  try {
+    const { id } = req.params;
+    const userInfo = await serverUserdb.findOne({
+      serverId: req.body.serverId,
+      userId: req.session.user.id,
+    });
+
+    // Проверка прав администратора
+    if (!userInfo || userInfo.serverRole !== "admin") {
+      return res.status(403).json({
+        success: false,
+        error: "Недостаточно прав. Требуются права администратора"
+      });
+    }
+
+    const auction = await auctiondb.findByIdAndUpdate(
+      id,
+      {
+        status: "cancelled",
+      },
+      { new: true } // Возвращает обновленный документ
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: auction,
+    });
+  } catch (error) {
+    console.error('Error cancel auction:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Внутренняя ошибка сервера"
+    });
+  }
+})
+
+app.post("/dis/auction/:id/buyout", async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).send("Не авторизован")
+  }
+
+  try {
+    const { id } = req.params;
+    const { serverId } = req.body
+    const userInfo = await serverUserdb.findOne({
+      serverId: serverId,
+      userId: req.session.user.id,
+    });
+    const auction = await auctiondb.findById(id);
+
+    const userRoleIds = userInfo.serverRoles?.map(role => role.roleId) || [];
+    const allowedRoleIds = auction.whatRolesCanBid.map(role => role.roleId);
+    const hasAllowedRole = userRoleIds.some(roleId =>
+      allowedRoleIds.includes(roleId)
+    );
+
+    // Проверка статуса аукциона
+    if (auction.status !== 'active') {
+      return res.status(400).json({
+        success: false,
+        error: `Аукцион ${auction.status === 'ended' ? 'завершен' : auction.status === 'cancelled' ? 'отменен' : 'не активен'}`
+      });
+    }
+
+    // Проверка времени окончания
+    if (new Date(auction.endTime) < new Date()) {
+      return res.status(400).json({
+        success: false,
+        error: "Аукцион истек"
+      });
+    }
+
+    if (!hasAllowedRole) {
+      return res.status(403).json({
+        success: false,
+        error: "Недостаточно прав. Нельзя участвовать"
+      });
+    }
+
+    // Проверка баланса
+    if (auction.buyoutPrice > userInfo.dkpPoints) {
+      return res.status(400).json({
+        success: false,
+        error: "Недостаточно средств"
+      });
+    }
+
+    const updatedAuction = await auctiondb.findByIdAndUpdate(
+      id,
+      {
+        $push: {
+          bids: {
+            userId: req.session.user.id,
+            userName: req.session.user.tag || req.session.user.username,
+            amount: auction.buyoutPrice,
+          }
+        },
+        $set: {
+          status: 'ended',
+          winner: {
+            userId: req.session.user.id,
+            userName: req.session.user.tag || req.session.user.username,
+            winningBid: auction.buyoutPrice,
+            claimedAt: new Date()
+          },
+        }
+      },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Аукцион выкуплен!",
+      isBuyout: true,
+      data: updatedAuction
+    });
+  } catch (error) {
+    console.error('Error cancel auction:', error);
+    return res.status(500).json({
+      success: false,
+      error: "Внутренняя ошибка сервера"
+    });
+  }
+})
+
+app.post("/dis/auction/:id/bid", async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).send("Не авторизован")
+  }
+
+  try {
+    const { id } = req.params;
+    const { serverId, amount } = req.body
+    const userInfo = await serverUserdb.findOne({
+      serverId: serverId,
+      userId: req.session.user.id,
+    });
+    const auction = await auctiondb.findById(id);
+
+    const userRoleIds = userInfo.serverRoles?.map(role => role.roleId) || [];
+    const allowedRoleIds = auction.whatRolesCanBid.map(role => role.roleId);
+    const hasAllowedRole = userRoleIds.some(roleId =>
+      allowedRoleIds.includes(roleId)
+    );
+
+    // Проверка статуса аукциона
+    if (auction.status !== 'active') {
+      return res.status(400).json({
+        success: false,
+        error: `Аукцион ${auction.status === 'ended' ? 'завершен' : auction.status === 'cancelled' ? 'отменен' : 'не активен'}`
+      });
+    }
+
+    // Проверка времени окончания
+    if (new Date(auction.endTime) < new Date()) {
+      return res.status(400).json({
+        success: false,
+        error: "Аукцион истек"
+      });
+    }
+
+    if (!hasAllowedRole) {
+      return res.status(403).json({
+        success: false,
+        error: "Недостаточно прав. Нельзя участвовать"
+      });
+    }
+
+    // Проверка суммы ставки
+    const bidAmount = Number(amount);
+    if (isNaN(bidAmount) || bidAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Некорректная сумма ставки"
+      });
+    }
+
+    // Проверка баланса
+    if (bidAmount > userInfo.dkpPoints) {
+      return res.status(400).json({
+        success: false,
+        error: "Недостаточно средств"
+      });
+    }
+
+    // Текущая цена (если есть ставки - последняя, иначе стартовая)
+    const currentPrice = auction.bids?.length > 0
+      ? auction.bids[auction.bids.length - 1].amount
+      : auction.startPrice;
+
+    // Проверка минимальной ставки
+    if (bidAmount <= currentPrice) {
+      return res.status(400).json({
+        success: false,
+        error: `Ставка должна быть больше текущей цены (${currentPrice})`,
+        currentPrice: currentPrice,
+        minBid: currentPrice + auction.minBidStep
+      });
+    }
+
+    // Проверка минимального шага
+    if (bidAmount < currentPrice + auction.minBidStep) {
+      return res.status(400).json({
+        success: false,
+        error: `Минимальный шаг ставки: ${auction.minBidStep}`,
+        minBid: currentPrice + auction.minBidStep
+      });
+    }
+
+    // Обычная ставка
+    const updatedAuction = await auctiondb.findByIdAndUpdate(
+      id,
+      {
+        $push: {
+          bids: {
+            userId: req.session.user.id,
+            userName: req.session.user.tag || req.session.user.username,
+            amount: bidAmount,
+            createdAt: new Date()
+          }
+        },
+        $set: {
+          currentPrice: bidAmount
+        }
+      },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Ставка успешно сделана",
+      data: {
+        bid: {
+          userId: req.session.user.id,
+          userName: req.session.user.tag || req.session.user.username,
+          amount: bidAmount,
+          createdAt: new Date()
+        },
+        currentPrice: bidAmount,
+        auctionId: auction._id
+      }
+    });
+  } catch (error) {
+    console.error('Error cancel auction:', error);
     return res.status(500).json({
       success: false,
       error: "Внутренняя ошибка сервера"
@@ -552,6 +818,69 @@ const getGO = (gameid) =>
   })
 
 const job = new CronJob("*/5 * * * *", null, false, "Europe/Moscow")
+
+const auctionJob = new CronJob("*/1 * * * *", null, false, "Europe/Moscow")
+
+auctionJob.addCallback(async () => {
+  console.log('🔄 Проверка аукционов на завершение...', new Date().toISOString());
+
+  try {
+    // Находим активные аукционы, у которых время окончания меньше текущего времени
+    const expiredAuctions = await auctiondb.find({
+      status: 'active',
+      endTime: { $lt: new Date() }
+    });
+
+    if (expiredAuctions.length === 0) {
+      console.log('✅ Нет аукционов для завершения');
+      return;
+    }
+
+    console.log(`📦 Найдено ${expiredAuctions.length} аукционов для завершения`);
+
+    // Обрабатываем каждый аукцион
+    for (const auction of expiredAuctions) {
+      try {
+        await completeAuction(auction);
+        console.log(`✅ Аукцион "${auction.itemName}" (${auction._id}) завершен`);
+      } catch (error) {
+        console.error(`❌ Ошибка при завершении аукциона ${auction._id}:`, error);
+      }
+    }
+
+    console.log('✅ Проверка завершена');
+  } catch (error) {
+    console.error('❌ Ошибка при проверке аукционов:', error);
+  }
+})
+
+async function completeAuction(auction) {
+  const winner = auction.bids && auction.bids.length > 0
+    ? auction.bids[auction.bids.length - 1]
+    : null;
+
+  const updateData = {
+    status: 'ended',
+    endedAt: new Date(),
+  };
+
+  if (winner) {
+    updateData.winner = {
+      userId: winner.userId,
+      userName: winner.userName,
+      winningBid: winner.amount,
+      claimedAt: null,
+    };
+  }
+
+  const updatedAuction = await auctiondb.findByIdAndUpdate(
+    auction._id,
+    { $set: updateData },
+    { new: true }
+  );
+
+  return updatedAuction;
+}
 
 bot.on("ready", (_) => {
   console.log(`Logged in as ${bot.user.tag}!`)
