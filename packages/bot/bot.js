@@ -299,7 +299,8 @@ app.post("/dis/auction/list", async (req, res) => {
       createdAt: auction.createdAt,
       whatRoleCanBid: auction.whatRolesCanBid[0],
       serverId: auction.serverId,
-      winner: auction.winner
+      winner: auction.winner,
+      bids: auction.bids
     }));
 
     return res.status(200).json({
@@ -414,7 +415,7 @@ app.post("/dis/auction/:id/buyout", async (req, res) => {
         $push: {
           bids: {
             userId: req.session.user.id,
-            userName: req.session.user.tag || req.session.user.username,
+            userName: userInfo.userName || req.session.user.username,
             amount: auction.buyoutPrice,
           }
         },
@@ -422,7 +423,7 @@ app.post("/dis/auction/:id/buyout", async (req, res) => {
           status: 'ended',
           winner: {
             userId: req.session.user.id,
-            userName: req.session.user.tag || req.session.user.username,
+            userName: userInfo.userName || req.session.user.username,
             winningBid: auction.buyoutPrice,
             claimedAt: new Date()
           },
@@ -540,7 +541,7 @@ app.post("/dis/auction/:id/bid", async (req, res) => {
         $push: {
           bids: {
             userId: req.session.user.id,
-            userName: req.session.user.tag || req.session.user.username,
+            userName: userInfo.userName || req.session.user.username,
             amount: bidAmount,
             createdAt: new Date()
           }
@@ -558,7 +559,7 @@ app.post("/dis/auction/:id/bid", async (req, res) => {
       data: {
         bid: {
           userId: req.session.user.id,
-          userName: req.session.user.tag || req.session.user.username,
+          userName: userInfo.userName || req.session.user.username,
           amount: bidAmount,
           createdAt: new Date()
         },

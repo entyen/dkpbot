@@ -8,6 +8,13 @@ import { DiscordRole, ServerUser } from "@/shared/types";
 import { useNavigate } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks";
 
+interface BidHistoryItem {
+  amount: number
+  userId: string
+  userName: string
+  _id: string
+}
+
 interface AuctionItem {
   id: string;
   itemName: string;
@@ -28,8 +35,11 @@ interface AuctionItem {
     userName: string;
     winningBid: number;
   };
+  minBidStep: number;
+  bids: BidHistoryItem[],
   serverId: string;
 }
+
 
 const fetchAuctions = async (serverId: string): Promise<AuctionItem[]> => {
   const { data } = await apiClient.post('/auction/list', { serverId });
@@ -54,7 +64,7 @@ export const AuctionPage = () => {
       navigate,
       setServerUserData,
       setError,
-      setIsLoading: () => {},
+      setIsLoading: () => { },
     });
   }, [serverId, navigate]);
 
@@ -334,10 +344,52 @@ const CreateAuctionForm = ({
   );
 };
 
+//Bid History modal
+const BidHistoryModal = ({ bids, onClose }: { auctionId: string; bids: BidHistoryItem[]; onClose: () => void }) => {
+
+  const recentBids = [...bids]
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5);
+
+  return (
+    <div className="bid-history-overlay" onClick={onClose}>
+      <div className="bid-history-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="bid-history-modal__header">
+          <h3>История ставок</h3>
+          <button className="bid-history-modal__close" onClick={onClose}>✕</button>
+        </div>
+        <div className="bid-history-modal__content">
+          {recentBids.length === 0 ? (
+            <div className="bid-history-modal__empty">Пока нет ставок</div>
+          ) : (
+            <div className="bid-history-modal__list">
+              {recentBids.map((bid, index) => (
+                <div key={index} className="bid-history-modal__item">
+                  <span className="bid-history-modal__user">{bid.userName}</span>
+                  <span className="bid-history-modal__amount">{bid.amount} DKP</span>
+                  <span className="bid-history-modal__time">
+                    {new Date(123123123).toLocaleString('ru-RU', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+              ))}
+            </div>)
+          }
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Карточка лота ───
 const AuctionCard = ({ auction, isOwner }: { auction: AuctionItem; isOwner: boolean }) => {
   const user = useUserStore((state) => state.user);
   const queryClient = useQueryClient();
+  const [showBidHistory, setShowBidHistory] = useState(false);
 
   const timeLeft = new Date(auction.endTime).getTime() - Date.now();
   const isEnded = timeLeft <= 0 || auction.status !== 'active';
@@ -400,7 +452,7 @@ const AuctionCard = ({ auction, isOwner }: { auction: AuctionItem; isOwner: bool
 
   const handleBid = () => {
     if (!user?.id) return alert("Авторизуйтесь");
-    const newBidAmount = auction.currentBid + 5;
+    const newBidAmount = auction.currentBid + auction.minBidStep;
     bidMutation.mutate({ auctionId: auction.id, serverId: auction.serverId, amount: newBidAmount });
   };
 
@@ -437,7 +489,7 @@ const AuctionCard = ({ auction, isOwner }: { auction: AuctionItem; isOwner: bool
           <span>Текущая ставка</span>
           <strong>{auction.currentBid} DKP</strong>
         </div>
-        <div className="auction-card__stat">
+        <div className="auction-card__stat auction-card__stat--clickable" onClick={() => setShowBidHistory(true)}>
           <span>Ставок</span>
           <strong>{auction.bidsCount}</strong>
         </div>
@@ -454,7 +506,7 @@ const AuctionCard = ({ auction, isOwner }: { auction: AuctionItem; isOwner: bool
             onClick={handleBid}
             disabled={bidMutation.isPending}
           >
-            {bidMutation.isPending ? '...' : 'Ставка +5'}
+            {bidMutation.isPending ? '...' : 'Ставка +' + auction.minBidStep}
           </button>
           {auction.buyoutPrice && (
             <button
@@ -470,6 +522,14 @@ const AuctionCard = ({ auction, isOwner }: { auction: AuctionItem; isOwner: bool
         <div className="auction-card__ended">
           {auction.winner ? `Победитель: ${auction.winner.userName}` : 'Нет ставок'}
         </div>
+      )}
+
+      {showBidHistory && (
+        <BidHistoryModal
+          auctionId={auction.id}
+          bids={auction.bids}
+          onClose={() => setShowBidHistory(false)}
+        />
       )}
 
       {isOwner && !isEnded && (
