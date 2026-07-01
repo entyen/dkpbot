@@ -354,15 +354,10 @@ bot.on("ready", (_) => {
 
   // slash commands register
   const commands = [
-    new ContextMenuCommandBuilder()
-      .setName("Login")
-      .setNameLocalizations({ ru: "Авторизация" })
-      .setType(ApplicationCommandType.User),
-    new ContextMenuCommandBuilder()
-      .setName("User Information")
-      .setNameLocalizations({ ru: "Информация о пользователе" })
-      .setType(ApplicationCommandType.User)
-      .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    // new ContextMenuCommandBuilder()
+    //   .setName("Login")
+    //   .setNameLocalizations({ ru: "Авторизация" })
+    //   .setType(ApplicationCommandType.User),
     new ContextMenuCommandBuilder()
       .setName("Point Balance")
       .setNameLocalizations({ ru: "Баланс очков" })
@@ -372,6 +367,10 @@ bot.on("ready", (_) => {
       .setNameLocalizations({ ru: "Выдать очки" })
       .setType(ApplicationCommandType.User)
       .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    new SlashCommandBuilder()
+      .setName("login")
+      .setDescription("Login to site")
+      .setDescriptionLocalizations({ ru: "Перейти на сайт" }),
     new SlashCommandBuilder()
       .setName("set-server-currency-emoji")
       .setDescription("Set server currency emoji")
@@ -478,14 +477,6 @@ bot.on("ready", (_) => {
         content: 'Нажми кнопку для авторизации (действует 5 минут):',
         components: [row],
       });
-    } else if (interaction.commandName === "User Information") {
-      const embed = new EmbedBuilder()
-        .setColor("#0099ff")
-        .setTitle("User Information")
-        .setDescription(
-          `User: <@${iUser}>\n\n **Balance**: ${iUser.balance} ${currency}\n **Fine**: ${iUser.fine} ${currency}`
-        )
-      await interaction.reply({ embeds: [embed] })
     } else if (interaction.commandName === "Give Points") {
       const serverInfo = await serverdb.findOne({
         serverId: interaction?.guildId,
@@ -1062,6 +1053,30 @@ bot.on("interactionCreate", async (inter) => {
             ephemeral: true
           })
         }
+      case "login":
+        const token = crypto.randomBytes(32).toString('hex');
+
+        loginTokens.set(token, {
+          userId: inter.user.id,
+          username: inter.user.username,
+          avatar: inter.user.displayAvatarURL(),
+          expiresAt: Date.now() + 5 * 60 * 1000, // 5 минут
+        });
+
+        const loginUrl = `https://api.grk.pw/dis/bot-login?token=${token}`;
+
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setLabel('Войти на сайт')
+            .setStyle(ButtonStyle.Link)
+            .setURL(loginUrl)
+        );
+
+        return await inter.reply({
+          content: 'Нажми кнопку для авторизации (действует 5 минут):',
+          components: [row],
+          ephemeral: true
+        });
       case "set-server-currency-emoji":
         const emojiId = inter.options.getString("emoji_id")
         try {
