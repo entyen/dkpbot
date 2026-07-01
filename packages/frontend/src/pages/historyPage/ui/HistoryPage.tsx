@@ -4,36 +4,23 @@ import { useEffect, useState } from "react"
 import { HistoryItem } from "@/shared/types"
 import { fetchUserHistoryData } from "@/features"
 import { useDocumentTitle } from "@/shared/hooks"
+import { useUserStore } from "@/store"
 
 export const HistoryPage = () => {
   useDocumentTitle("User Points History")
   const navigate = useNavigate()
+  const serverId = useUserStore((state) => state.servers?.selectedServer.serverId)
   const [historyData, setHistoryData] = useState<HistoryItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchUserHistoryData({
+      serverId,
       navigate,
       setHistoryData,
       setError,
     })
-
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === "servers") {
-        fetchUserHistoryData({
-          navigate,
-          setHistoryData,
-          setError,
-        })
-      }
-    }
-
-    window.addEventListener("storage", handleStorageChange)
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange)
-    }
-  }, [navigate])
+  }, [serverId, navigate])
 
   useEffect(() => {
     navigate("/history")

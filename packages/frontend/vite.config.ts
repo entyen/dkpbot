@@ -12,14 +12,14 @@ export default defineConfig({
       protocol: "wss",
       port: 9001,
     },
-    proxy: {
-      "/api": {
-        target: "ws://localhost:9002",
-        changeOrigin: true,
-        ws: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
-      },
-    },
+    // proxy: {
+    //   "/api": {
+    //     target: "ws://localhost:9002",
+    //     changeOrigin: true,
+    //     ws: true,
+    //     rewrite: (path) => path.replace(/^\/api/, ""),
+    //   },
+    // },
   },
   plugins: [react()],
   css: {

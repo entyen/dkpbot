@@ -1,36 +1,44 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import axios from "axios";
+import { apiClient } from "@/shared/api";
+import { useUserStore } from "@/store";
 
 export const ProtectedRoute = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const user = useUserStore((state) => state.user);
+  const setUser = useUserStore((state) => state.setUser);
+  const setServers = useUserStore((state) => state.setServers);
 
   useEffect(() => {
     const checkAuthentication = async () => {
-      const user = localStorage.getItem("user");
-      if (!user) {
-        try {
-          const userFetch = await axios.get("https://api.grk.pw/dis/user", {
-            withCredentials: true,
-          });
-          const userServerFetch = await axios.get("https://api.grk.pw/dis/userServers", {
-            withCredentials: true,
-          });
-          localStorage.setItem("user", JSON.stringify({ ...userFetch.data, timestamp: Date.now()}));
-          const serverList = { selectedServer: { ...userServerFetch.data[0] }, serverList: [...userServerFetch.data] }
-          localStorage.setItem("servers", JSON.stringify(serverList));
-          setIsAuthenticated(true); // Пользователь успешно аутентифицирован
-        } catch (error) {
-          console.error("Ошибка проверки аутентификации:", error);
-          setIsAuthenticated(false); // Пользователь не аутентифицирован
-        }
-      } else {
+      if (user) {
         setIsAuthenticated(true); // Пользователь уже аутентифицирован
+        return;
+      }
+
+      try {
+        const userFetch = await apiClient.get("/user");
+        const userServerFetch = await apiClient.get("/userServers");
+
+        if (userFetch.status === 401 || userServerFetch.status === 401) {
+          setIsAuthenticated(false); // Пользователь не аутентифицирован
+          return;
+        }
+
+        setUser(userFetch.data);
+        setServers({
+          selectedServer: { ...userServerFetch.data[0] },
+          serverList: [...userServerFetch.data],
+        });
+        setIsAuthenticated(true); // Пользователь успешно аутентифицирован
+      } catch (error) {
+        console.error("Ошибка проверки аутентификации:", error);
+        setIsAuthenticated(false); // Пользователь не аутентифицирован
       }
     };
 
     checkAuthentication();
-  }, []);
+  }, [user, setUser, setServers]);
 
   if (isAuthenticated === null) {
     // Пока идет проверка аутентификации

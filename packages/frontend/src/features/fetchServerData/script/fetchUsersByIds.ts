@@ -1,4 +1,4 @@
-import axios from "axios";
+import { apiClient } from "@/shared/api";
 import { ServerUser } from "@/shared/types";
 
 export const fetchUsersByIds = async (
@@ -6,14 +6,10 @@ export const fetchUsersByIds = async (
   serverId: string
 ): Promise<ServerUser[]> => {
   try {
-    const response = await axios.post(
-      "https://api.grk.pw/dis/usersBulkFetch",
-      {
-        userIds,
-        serverId,
-      },
-      { withCredentials: true }
-    );
+    const response = await apiClient.post("/usersBulkFetch", {
+      userIds,
+      serverId,
+    });
 
     if (response.data && Array.isArray(response.data)) {
       return response.data;

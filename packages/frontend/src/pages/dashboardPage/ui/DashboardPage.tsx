@@ -1,9 +1,10 @@
 import "./dashboardPage.scss"
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState, useCallback } from "react";
-import { User, HistoryItem, Server } from "@/shared/types";
+import { useEffect, useState } from "react";
+import { HistoryItem } from "@/shared/types";
 import { calculateServerStats, fetchServerHistoryData } from "@/features"
 import { useDocumentTitle } from "@/shared/hooks";
+import { useUserStore } from "@/store";
 import { PointsBadge } from "@/shared/ui";
 
 interface SimpleStats {
@@ -32,51 +33,16 @@ interface SimpleStats {
 export const DashboardPage = () => {
   useDocumentTitle("Server Dashboard")
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
-  const [server, setServer] = useState<Server | null>(null);
+  const user = useUserStore((state) => state.user);
+  const server = useUserStore((state) => state.servers);
+  const serverId = server?.selectedServer.serverId;
   const [serverHistoryData, setServerHistoryData] = useState<HistoryItem[] | null>(null);
   const [stats, setStats] = useState<SimpleStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadUserFromLocalStorage = useCallback(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser) as User);
-      } catch (e) {
-        console.error("Ошибка парсинга user:", e);
-        setUser(null);
-      }
-    } else {
-      setUser(null);
-    }
-  }, []);
-
-  const loadServersFromLocalStorage = useCallback(() => {
-    const storedServers = localStorage.getItem("servers");
-    if (storedServers) {
-      try {
-        setServer(JSON.parse(storedServers) as Server)
-      } catch (e) {
-        console.error("Ошибка парсинга servers:", e);
-        setServer(null);
-      }
-    } else {
-      setError("Данные отсутствуют в localStorage.");
-      return setServer(null);
-    }
-  }, []);
-
   const loadStats = async () => {
     if (!serverHistoryData || serverHistoryData.length === 0) return;
-
-    const servers = localStorage.getItem("servers");
-    if (!servers) return;
-
-    const parsedServers = JSON.parse(servers);
-    const serverId = parsedServers.selectedServer?.serverId;
-
     if (!serverId) return;
 
     try {
@@ -95,34 +61,14 @@ export const DashboardPage = () => {
 
   useEffect(() => {
     setIsLoading(true);
-    loadUserFromLocalStorage();
-    loadServersFromLocalStorage();
     fetchServerHistoryData({
+      serverId,
       navigate,
       setServerHistoryData,
       setError,
       setIsLoading,
     });
-
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === "user") {
-        loadUserFromLocalStorage();
-      }
-      if (event.key === "servers") {
-        fetchServerHistoryData({
-          navigate,
-          setServerHistoryData,
-          setError,
-          setIsLoading,
-        });
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, [loadUserFromLocalStorage, navigate]);
+  }, [serverId, navigate]);
 
   if (isLoading) {
     return (

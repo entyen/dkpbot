@@ -1,9 +1,10 @@
 import "./homePage.scss";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState, useCallback } from "react";
-import { User, ServerUser } from "@/shared/types";
+import { useEffect, useState } from "react";
+import { ServerUser } from "@/shared/types";
 import { fetchServerUserData } from "@/features";
 import { useDocumentTitle } from "@/shared/hooks";
+import { useUserStore } from "@/store";
 import { PointsBadge } from "@/shared/ui";
 
 // Небольшой хелпер для читаемого формата даты
@@ -41,54 +42,22 @@ const formatDate = (dateSource?: string | Date): string => {
 export const HomePage = () => {
   useDocumentTitle("User Home Page");
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
+  const user = useUserStore((state) => state.user);
+  const serverId = useUserStore((state) => state.servers?.selectedServer.serverId);
   const [serverUserData, setServerUserData] = useState<ServerUser | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadUserFromLocalStorage = useCallback(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser) as User);
-      } catch (e) {
-        console.error("Ошибка парсинга user:", e);
-        setUser(null);
-      }
-    } else {
-      setUser(null);
-    }
-  }, []);
-
   useEffect(() => {
     setIsLoading(true);
-    loadUserFromLocalStorage();
     fetchServerUserData({
+      serverId,
       navigate,
       setServerUserData,
       setError,
       setIsLoading,
     });
-
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === "user") {
-        loadUserFromLocalStorage();
-      }
-      if (event.key === "servers") {
-        fetchServerUserData({
-          navigate,
-          setServerUserData,
-          setError,
-          setIsLoading,
-        });
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, [loadUserFromLocalStorage, navigate]);
+  }, [serverId, navigate]);
 
   if (isLoading) {
     return (

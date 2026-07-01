@@ -1,20 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./navbar.scss";
 import clsx from "clsx";
 import { LogoIcon } from "@/shared/assets";
-
-interface Server {
-  selectedServer: {
-    serverId: string;
-    serverName: string;
-    ownerId: string;
-  };
-  serverList: {
-    serverId: string;
-    serverName: string;
-    ownerId: string;
-  }[];
-}
+import { useUserStore } from "@/store";
+import { ServerListItem } from "@/shared/types";
 
 // Inline SVG иконки
 const ChevronDownIcon = ({ className }: { className?: string }) => (
@@ -68,23 +57,13 @@ const CheckIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const useServerChange = () => {
-  const [serverVersion, setServerVersion] = useState(0);
-  const notifyServerChange = useCallback(() => {
-    setServerVersion((v) => v + 1);
-    window.dispatchEvent(new CustomEvent("server-changed"));
-  }, []);
-  return { serverVersion, notifyServerChange };
-};
-
 export const Navbar = () => {
-  const [serverData, setServerData] = useState<Server>({
-    selectedServer: { serverId: "", serverName: "", ownerId: "" },
-    serverList: [],
-  });
+  const user = useUserStore((state) => state.user);
+  const servers = useUserStore((state) => state.servers);
+  const setSelectedServer = useUserStore((state) => state.setSelectedServer);
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { notifyServerChange } = useServerChange();
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -96,39 +75,19 @@ export const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const storedServerData = localStorage.getItem("servers");
-    if (storedServerData) {
-      const parsedServerData: Server = JSON.parse(storedServerData);
-      if (parsedServerData?.serverList.length > 0) {
-        const selectedServer = parsedServerData.selectedServer.serverId
-          ? parsedServerData.selectedServer
-          : parsedServerData.serverList[0];
-        setServerData({
-          ...parsedServerData,
-          selectedServer,
-        });
-      }
-    }
-  }, []);
+  const serverList = servers?.serverList ?? [];
+  const selectedServer = servers?.selectedServer;
 
-  const handleServerSelect = (server: Server["serverList"][0]) => {
-    const updatedServerData = {
-      ...serverData,
-      selectedServer: server,
-    };
-    setServerData(updatedServerData);
-    localStorage.setItem("servers", JSON.stringify(updatedServerData));
+  const handleServerSelect = (server: ServerListItem) => {
+    setSelectedServer(server);
     setDropdownOpen(false);
-    notifyServerChange();
   };
 
   const NavBarMenu = () => {
-    const user = localStorage.getItem("user");
     const isOwner =
       user &&
-      serverData.selectedServer.serverId &&
-      String(serverData.selectedServer.ownerId) === String(JSON.parse(user).id);
+      selectedServer?.serverId &&
+      String(selectedServer.ownerId) === String(user.id);
 
     return (
       <div className="menu">
@@ -153,11 +112,11 @@ export const Navbar = () => {
             <button
               className="server-selector-trigger"
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              disabled={serverData.serverList.length === 0}
+              disabled={serverList.length === 0}
             >
               <GuildIcon className="server-icon" />
               <span className="server-name">
-                {serverData.selectedServer.serverName || "Select Guild"}
+                {selectedServer?.serverName || "Select Guild"}
               </span>
               <ChevronDownIcon
                 className={clsx("chevron", { "chevron-open": dropdownOpen })}
@@ -168,19 +127,18 @@ export const Navbar = () => {
               <div className="server-dropdown">
                 <div className="server-dropdown-header">
                   <span>Your Guilds</span>
-                  <span className="server-count">{serverData.serverList.length}</span>
+                  <span className="server-count">{serverList.length}</span>
                 </div>
                 <div className="server-dropdown-list">
-                  {serverData.serverList.map((server) => {
-                    const user = localStorage.getItem("user");
-                    const isOwner = user && String(server.ownerId) === String(JSON.parse(user).id);
+                  {serverList.map((server) => {
+                    const isOwner = user && String(server.ownerId) === String(user.id);
 
                     return (
                       <button
                         key={server.serverId}
                         className={clsx("server-option", {
                           "server-option-active":
-                            server.serverId === serverData.selectedServer.serverId,
+                            server.serverId === selectedServer?.serverId,
                         })}
                         onClick={() => handleServerSelect(server)}
                       >
@@ -188,7 +146,7 @@ export const Navbar = () => {
                           <span className="server-option-name">{server.serverName}</span>
                           {isOwner && <span className="server-option-badge">Owner</span>}
                         </div>
-                        {server.serverId === serverData.selectedServer.serverId && (
+                        {server.serverId === selectedServer?.serverId && (
                           <CheckIcon className="server-option-check" />
                         )}
                       </button>
@@ -205,23 +163,4 @@ export const Navbar = () => {
       </nav>
     </article>
   );
-};
-
-export const useCurrentServer = () => {
-  const [currentServer, setCurrentServer] = useState<Server["selectedServer"] | null>(null);
-
-  useEffect(() => {
-    const updateServer = () => {
-      const stored = localStorage.getItem("servers");
-      if (stored) {
-        const parsed: Server = JSON.parse(stored);
-        setCurrentServer(parsed.selectedServer);
-      }
-    };
-    updateServer();
-    window.addEventListener("server-changed", updateServer);
-    return () => window.removeEventListener("server-changed", updateServer);
-  }, []);
-
-  return currentServer;
 };

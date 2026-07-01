@@ -1,7 +1,9 @@
-import axios from "axios";
+import { apiClient } from "@/shared/api";
+import { useUserStore } from "@/store";
 import { ServerUser } from "@/shared/types";
 
 interface FetchServerUserDataParams {
+  serverId: string | undefined;
   navigate: (path: string) => void;
   setServerUserData: (data: ServerUser | null) => void;
   setError: (error: string | null) => void;
@@ -9,34 +11,22 @@ interface FetchServerUserDataParams {
 }
 
 export const fetchServerUserData = async ({
+  serverId,
   navigate,
   setServerUserData,
   setError,
   setIsLoading,
 }: FetchServerUserDataParams): Promise<void> => {
   try {
-    const servers = localStorage.getItem("servers");
-    if (!servers) {
-      setError("Данные отсутствуют в localStorage.");
-      return;
-    }
-
-    const parsedServers = JSON.parse(servers);
-    const serverId = parsedServers.selectedServer?.serverId;
-
     if (!serverId) {
       setError("Некорректные данные пользователя или сервера.");
       return;
     }
 
-    const response = await axios.post(
-      "https://api.grk.pw/dis/userInfoFetch",
-      { serverId },
-      { withCredentials: true }
-    );
+    const response = await apiClient.post("/userInfoFetch", { serverId });
 
     if (response.status === 401) {
-      localStorage.clear();
+      useUserStore.getState().logout();
       navigate("/login");
       return;
     }
