@@ -49,6 +49,46 @@ const serverUserSchema = new Schema({
   activityPoints: { type: Number, default: 0 },
 });
 
+const auctionItemSchema = new Schema({
+  serverId: { type: String, required: true, index: true },
+  createdBy: { type: String, required: true },
+
+  itemName: { type: String, require: true },
+  itemIcon: { type: String, default: null },
+  description: { type: String, default: '' },
+
+  startPrice: { type: Number, required: true, min: 5 },
+  minBidStep: { type: Number, default: 5 },
+  buyoutPrice: { type: Number, default: null },
+
+  startTime: { type: Date, required: true },
+  endTIme: { type: Date, require: true },
+
+  status: {
+    type: String,
+    enum: ['active', 'ended', 'cancelled', 'claimed'],
+    default: 'active'
+  },
+
+  whatRolesCanBid: [{
+    roleName: { type: String },
+    roleId: { type: String }
+  }],
+
+  winner: {
+    userId: { type: String, default: null },
+    userName: { type: String, default: null },
+    winningBid: { type: Number, default: null },
+    claimedAt: { type: Date, default: null }
+  },
+
+  bids: [{
+    userId: { type: String, required: true },
+    userName: { type: String, required: true },
+    amount: { type: Number, required: true, min: 0 },
+  }],
+})
+
 const givingPointsSchema = new Schema({
   serverId: { type: String, require: true },
   giverId: { type: String, require: true },
@@ -58,10 +98,13 @@ const givingPointsSchema = new Schema({
 });
 
 serverUserSchema.index({ serverId: 1, userId: 1 }, { unique: true });
+auctionItemSchema.index({ serverId: 1, status: 1 });
+auctionItemSchema.index({ endTime: 1 });
 
 const serverdb = model("servers", serverSchema);
 const serverUserdb = model("servers_users", serverUserSchema);
 const pointsdb = model('points', givingPointsSchema)
+const auctiondb = model('auction_item', auctionItemSchema);
 
 module.exports = {
   userSchem,
@@ -69,5 +112,6 @@ module.exports = {
   nftUpdateSchem,
   serverdb,
   serverUserdb,
-  pointsdb
+  pointsdb,
+  auctiondb
 };

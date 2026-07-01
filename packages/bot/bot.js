@@ -142,7 +142,7 @@ app.get("/dis/bot-login", async (req, res) => {
 });
 
 app.get("/dis/user", (req, res) => {
-  console.log(req.session)
+  //console.log(req.session)
   if (!req.session.user) {
     return res.status(401).send("Не авторизован")
   }
