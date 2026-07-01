@@ -460,11 +460,20 @@ app.post("/dis/auction/:id/bid", async (req, res) => {
     });
     const auction = await auctiondb.findById(id);
 
-    const userRoleIds = userInfo.serverRoles?.map(role => role.roleId) || [];
-    const allowedRoleIds = auction.whatRolesCanBid.map(role => role.roleId);
-    const hasAllowedRole = userRoleIds.some(roleId =>
-      allowedRoleIds.includes(roleId)
-    );
+    if (auction?.whatRolesCanBid[0] !== null) {
+      const userRoleIds = userInfo.serverRoles?.map(role => role?.roleId) || [];
+      const allowedRoleIds = auction.whatRolesCanBid?.map(role => role?.roleId) || [];
+      const hasAllowedRole = userRoleIds.some(roleId =>
+        allowedRoleIds.includes(roleId)
+      );
+
+      if (!hasAllowedRole) {
+        return res.status(403).json({
+          success: false,
+          error: "Недостаточно прав. Нельзя участвовать"
+        });
+      }
+    }
 
     // Проверка статуса аукциона
     if (auction.status !== 'active') {
@@ -482,12 +491,6 @@ app.post("/dis/auction/:id/bid", async (req, res) => {
       });
     }
 
-    if (!hasAllowedRole) {
-      return res.status(403).json({
-        success: false,
-        error: "Недостаточно прав. Нельзя участвовать"
-      });
-    }
 
     // Проверка суммы ставки
     const bidAmount = Number(amount);
@@ -822,7 +825,7 @@ const job = new CronJob("*/5 * * * *", null, false, "Europe/Moscow")
 const auctionJob = new CronJob("*/1 * * * *", null, false, "Europe/Moscow")
 
 auctionJob.addCallback(async () => {
-  console.log('🔄 Проверка аукционов на завершение...', new Date().toISOString());
+  // console.log('🔄 Проверка аукционов на завершение...', new Date().toISOString());
 
   try {
     // Находим активные аукционы, у которых время окончания меньше текущего времени
@@ -832,7 +835,7 @@ auctionJob.addCallback(async () => {
     });
 
     if (expiredAuctions.length === 0) {
-      console.log('✅ Нет аукционов для завершения');
+      // console.log('✅ Нет аукционов для завершения');
       return;
     }
 
@@ -842,13 +845,13 @@ auctionJob.addCallback(async () => {
     for (const auction of expiredAuctions) {
       try {
         await completeAuction(auction);
-        console.log(`✅ Аукцион "${auction.itemName}" (${auction._id}) завершен`);
+        // console.log(`✅ Аукцион "${auction.itemName}" (${auction._id}) завершен`);
       } catch (error) {
         console.error(`❌ Ошибка при завершении аукциона ${auction._id}:`, error);
       }
     }
 
-    console.log('✅ Проверка завершена');
+    // console.log('✅ Проверка завершена');
   } catch (error) {
     console.error('❌ Ошибка при проверке аукционов:', error);
   }
