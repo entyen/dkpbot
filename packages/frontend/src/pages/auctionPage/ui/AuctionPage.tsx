@@ -393,6 +393,7 @@ const AuctionCard = ({ auction, isOwner }: { auction: AuctionItem; isOwner: bool
 
   const timeLeft = new Date(auction.endTime).getTime() - Date.now();
   const isEnded = timeLeft <= 0 || auction.status !== 'active';
+  const isCanceled = auction.status == 'cancelled';
 
   const formatTime = (ms: number) => {
     if (ms <= 0) return "Завершено";
@@ -517,6 +518,10 @@ const AuctionCard = ({ auction, isOwner }: { auction: AuctionItem; isOwner: bool
               {buyoutMutation.isPending ? '...' : `Выкуп ${auction.buyoutPrice} DKP`}
             </button>
           )}
+        </div>
+      ) : isCanceled ? (
+        <div className="auction-card__cancelled">
+          Отменен
         </div>
       ) : (
         <div className="auction-card__ended">

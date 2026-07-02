@@ -341,6 +341,7 @@ app.post("/dis/auction/:id/cancel", async (req, res) => {
       id,
       {
         status: "cancelled",
+        endTime: null
       },
       { new: true } // Возвращает обновленный документ
     );
@@ -421,6 +422,7 @@ app.post("/dis/auction/:id/buyout", async (req, res) => {
         },
         $set: {
           status: 'ended',
+          endTime: new Date(),
           winner: {
             userId: req.session.user.id,
             userName: userInfo.userName || req.session.user.username,
@@ -873,7 +875,7 @@ async function completeAuction(auction) {
       userId: winner.userId,
       userName: winner.userName,
       winningBid: winner.amount,
-      claimedAt: null,
+      claimedAt: new Date(),
     };
   }
 

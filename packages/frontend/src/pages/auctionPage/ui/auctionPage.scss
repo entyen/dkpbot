@@ -257,13 +257,7 @@
 
     &[data-ending="true"] {
       color: #ff4444;
-      animation: pulse 1s infinite;
     }
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
   }
 
   &__actions {
@@ -299,6 +293,16 @@
     &:hover {
       filter: brightness(1.1);
     }
+  }
+
+  &__cancelled {
+    font-size: 0.85rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius-sm);
+    text-align: center;
+    color: var(--danger-color, #dc3545);
+    background: var(--tertiary-bg);
+    border-radius: var(--border-radius-sm);
   }
 
   &__ended {
@@ -346,6 +350,7 @@
 .auction-card__stat--clickable {
   cursor: pointer;
   transition: opacity 0.2s;
+
   &:hover {
     opacity: 0.7;
   }
@@ -377,8 +382,12 @@
     align-items: center;
     padding: 16px 20px;
     border-bottom: 1px solid #2a2a3e;
-    
-    h3 { margin: 0; font-size: 16px; color: #fff; }
+
+    h3 {
+      margin: 0;
+      font-size: 16px;
+      color: #fff;
+    }
   }
 
   &__close {
@@ -393,7 +402,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    &:hover { color: #fff; }
+
+    &:hover {
+      color: #fff;
+    }
   }
 
   &__content {
@@ -401,7 +413,8 @@
     overflow-y: auto;
   }
 
-  &__loading, &__empty {
+  &__loading,
+  &__empty {
     text-align: center;
     padding: 24px;
     color: #888;
