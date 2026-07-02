@@ -282,6 +282,14 @@ app.post("/dis/auction/list", async (req, res) => {
       return sortedBids[0].amount;
     };
 
+    const parseBidsTime = (auction) => {
+      if (!auction?.bids) return [];
+      return auction.bids.map((bid) => ({
+        ...bid,
+        createdAt: bid._id.getTimestamp()
+      }));
+    };
+
     // Форматирование данных
     const formattedAuctions = auctions.map(auction => ({
       id: auction._id,
@@ -300,7 +308,7 @@ app.post("/dis/auction/list", async (req, res) => {
       whatRoleCanBid: auction.whatRolesCanBid[0],
       serverId: auction.serverId,
       winner: auction.winner,
-      bids: auction.bids
+      bids: parseBidsTime(auction)
     }));
 
     return res.status(200).json({

@@ -12,6 +12,7 @@ interface BidHistoryItem {
   amount: number
   userId: string
   userName: string
+  createdAt: Date
   _id: string
 }
 
@@ -368,7 +369,7 @@ const BidHistoryModal = ({ bids, onClose }: { auctionId: string; bids: BidHistor
                   <span className="bid-history-modal__user">{bid.userName}</span>
                   <span className="bid-history-modal__amount">{bid.amount} DKP</span>
                   <span className="bid-history-modal__time">
-                    {new Date(123123123).toLocaleString('ru-RU', {
+                    {new Date(bid.createdAt).toLocaleString('ru-RU', {
                       day: '2-digit',
                       month: '2-digit',
                       hour: '2-digit',
